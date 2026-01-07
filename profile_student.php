@@ -17,7 +17,7 @@ $student_id = $_SESSION['user_id'];
 $res = mysqli_query(
     $conn,
     "SELECT name, username, email, profile_pic 
-     FROM Students WHERE id=$student_id"
+     FROM Students WHERE id = $student_id"
 );
 $student = mysqli_fetch_assoc($res);
 
@@ -27,22 +27,33 @@ $profile_pic  = $student['profile_pic'];
 /* UPDATE PROFILE */
 if (isset($_POST['update_profile'])) {
 
-    $name     = mysqli_real_escape_string($conn, $_POST['name']);
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $email    = mysqli_real_escape_string($conn, $_POST['email']);
+    $name     = trim(mysqli_real_escape_string($conn, $_POST['name']));
+    $username = trim(mysqli_real_escape_string($conn, $_POST['username']));
+    $email    = trim(mysqli_real_escape_string($conn, $_POST['email']));
     $picPath  = $profile_pic;
 
     if (!empty($_FILES['profile_pic']['name'])) {
+
         $ext = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
-        $allowed = ['jpg','jpeg','png'];
+        $allowed = ['jpg', 'jpeg', 'png'];
 
         if (!in_array($ext, $allowed)) {
-            $error = "Only JPG, JPEG, PNG images allowed";
+            $error = "Only JPG, JPEG, PNG allowed";
         } else {
-            $newName = "student_" . $student_id . "." . $ext;
+
+            if (!is_dir("uploads/students")) {
+                mkdir("uploads/students", 0777, true);
+            }
+
+            // UNIQUE IMAGE NAME (NO CACHE ISSUE)
+            $newName = "student_" . $student_id . "_" . time() . "." . $ext;
             $uploadPath = "uploads/students/" . $newName;
-            move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadPath);
-            $picPath = $uploadPath;
+
+            if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadPath)) {
+                $picPath = $uploadPath;
+            } else {
+                $error = "Image upload failed!";
+            }
         }
     }
 
@@ -64,7 +75,6 @@ if (isset($_POST['update_profile'])) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Profile | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -101,7 +111,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
-    font-weight:bold;
 }
 
 .sidebar a {
@@ -110,13 +119,11 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:#d1d1d1;
     display:flex;
     align-items:center;
-    transition:0.3s;
 }
 
 .sidebar a i {
     margin-right:15px;
     width:20px;
-    text-align:center;
 }
 
 .sidebar a:hover,
@@ -125,10 +132,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:white;
 }
 
-.logout {
-    margin-top:auto;
-    border-top:1px solid rgba(255,255,255,0.15);
-}
+.logout { margin-top:auto; }
 
 /* ===== MAIN CONTENT ===== */
 .main-content {
@@ -142,13 +146,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     padding:30px;
     border-radius:15px;
     max-width:600px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
-}
-
-.card h2 {
-    color:#5A0E24;
-    margin-bottom:20px;
 }
 
 .profile-pic-large {
@@ -161,13 +159,8 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 }
 
 .form-group { margin-bottom:15px; }
-.form-group label { display:block; font-weight:bold; margin-bottom:6px; }
-.form-group input {
-    width:100%;
-    padding:10px;
-    border-radius:5px;
-    border:1px solid #ccc;
-}
+.form-group label { font-weight:bold; }
+.form-group input { width:100%; padding:10px; }
 
 .btn {
     background:#5d9415;
@@ -175,7 +168,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     padding:10px 18px;
     border:none;
     border-radius:6px;
-    font-weight:bold;
     cursor:pointer;
 }
 
@@ -187,7 +179,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.5);
-    z-index:999;
     justify-content:center;
     align-items:center;
 }
@@ -197,7 +188,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     padding:30px;
     border-radius:15px;
     text-align:center;
-    width:300px;
     position:relative;
 }
 
@@ -205,9 +195,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     width:200px;
     height:200px;
     border-radius:50%;
-    object-fit:cover;
     border:4px solid #5d9415;
-    margin-bottom:15px;
 }
 
 .close-btn {
@@ -222,49 +210,31 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-
     <div class="sidebar-profile" onclick="openProfilePopup()">
-        <img src="<?= $profile_pic ?: 'https://via.placeholder.com/85' ?>">
+        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85' ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
-    <a href="student_dashboard.php">
-        <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="join_class.php">
-        <i class="fas fa-users"></i> Join Class
-    </a>
-    <a href="my_classes_student.php">
-    <i class="fas fa-chalkboard"></i> My Classes
-</a>
-    <a href="results.php">
-        <i class="fas fa-chart-line"></i> Results
-    </a>
-    <a href="leaderboard.php">
-        <i class="fas fa-trophy"></i> Leaderboard
-    </a>
-    <a href="profile_student.php" class="active">
-        <i class="fas fa-user-edit"></i> Profile
-    </a>
+    <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
+    <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="results.php"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
+    <a href="profile_student.php" class="active"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
-        <a href="logout.php">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </div>
 
-<!-- MAIN CONTENT -->
 <div class="main-content">
     <div class="card">
         <h2>My Profile</h2>
 
-        <img src="<?= $profile_pic ?: 'https://via.placeholder.com/120' ?>" class="profile-pic-large">
+        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/120' ?>" class="profile-pic-large">
 
-        <form method="POST" enctype="multipart/form-data">
-
+        <form method="POST" action="profile_student.php" enctype="multipart/form-data">
             <div class="form-group">
                 <label>Profile Picture</label>
                 <input type="file" name="profile_pic">
@@ -287,11 +257,10 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 </div>
 
-<!-- PROFILE POPUP -->
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
-        <img src="<?= $profile_pic ?: 'https://via.placeholder.com/200' ?>">
+        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/200' ?>">
         <h2><?= htmlspecialchars($student_name) ?></h2>
     </div>
 </div>
@@ -303,9 +272,6 @@ function openProfilePopup() {
 function closeProfilePopup() {
     document.getElementById('profilePopup').style.display = 'none';
 }
-document.getElementById('profilePopup').addEventListener('click', function(e) {
-    if (e.target === this) closeProfilePopup();
-});
 </script>
 
 </body>

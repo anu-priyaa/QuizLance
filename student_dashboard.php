@@ -248,13 +248,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
             </div>
         </a>
 
-        <a href="feedback.php" class="menu-link">
-            <div class="menu-card">
-                <i class="fas fa-comment-dots"></i>
-                <h3>Feedback</h3>
-            </div>
-        </a>
-
     </div>
 </div>
 

@@ -185,7 +185,6 @@ textarea { resize:vertical; }
     <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="profile.php"><i class="fas fa-user-edit"></i> Profile</a>
-    <a href="feedback.php"><i class="fas fa-comments"></i> View Feedback</a>
 
     <div class="logout">
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>

@@ -201,9 +201,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     <a href="profile_teacher.php">
         <i class="fas fa-user-edit"></i> Profile
     </a>
-    <a href="view_feedback_teacher.php">
-        <i class="fas fa-comments"></i> View Feedback
-    </a>
+
 
     <div class="logout">
         <a href="logout.php">

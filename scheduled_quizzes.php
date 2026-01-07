@@ -42,36 +42,53 @@ if (isset($_POST['confirm_delete'])) {
     );
 
     if ($row = mysqli_fetch_assoc($check)) {
+
         if ($row['status'] === 'draft' || $row['status'] === 'scheduled') {
 
+            // 1️⃣ Delete quiz attempts FIRST (FK constraint)
             mysqli_query($conn,
-                "DELETE qo FROM question_options qo
-                 JOIN questions q ON qo.question_id = q.id
-                 WHERE q.quiz_id=$quiz_id"
+                "DELETE FROM quiz_attempts WHERE quiz_id=$quiz_id"
             );
 
-            mysqli_query($conn,
-                "DELETE qa FROM question_answers qa
-                 JOIN questions q ON qa.question_id = q.id
-                 WHERE q.quiz_id=$quiz_id"
-            );
-
-            // Delete any student answers tied to questions of this quiz (FK safety)
+            // 2️⃣ Delete student answers
             mysqli_query($conn,
                 "DELETE sa FROM student_answers sa
                  JOIN questions q ON sa.question_id = q.id
                  WHERE q.quiz_id=$quiz_id"
             );
 
-            mysqli_query($conn, "DELETE FROM questions WHERE quiz_id=$quiz_id");
-            mysqli_query($conn, "DELETE FROM quizzes WHERE id=$quiz_id");
+            // 3️⃣ Delete question answers
+            mysqli_query($conn,
+                "DELETE qa FROM question_answers qa
+                 JOIN questions q ON qa.question_id = q.id
+                 WHERE q.quiz_id=$quiz_id"
+            );
+
+            // 4️⃣ Delete question options
+            mysqli_query($conn,
+                "DELETE qo FROM question_options qo
+                 JOIN questions q ON qo.question_id = q.id
+                 WHERE q.quiz_id=$quiz_id"
+            );
+
+            // 5️⃣ Delete questions
+            mysqli_query($conn,
+                "DELETE FROM questions WHERE quiz_id=$quiz_id"
+            );
+
+            // 6️⃣ Finally delete quiz
+            mysqli_query($conn,
+                "DELETE FROM quizzes WHERE id=$quiz_id"
+            );
 
             $success = "Quiz deleted successfully";
+
         } else {
             $error = "Live or completed quizzes cannot be deleted";
         }
     }
 }
+
 
 /* =========================
    FETCH QUIZZES
@@ -244,7 +261,6 @@ th{
     </a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
-    <a href="view_feedback_teacher.php"><i class="fas fa-comments"></i> View Feedback</a>
 
     <div class="logout">
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>

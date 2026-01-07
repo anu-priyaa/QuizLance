@@ -218,7 +218,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="profile_teacher.php" class="active"><i class="fas fa-user-edit"></i> Profile</a>
-    <a href="view_feedback_teacher.php"><i class="fas fa-comments"></i> View Feedback</a>
 
     <div class="logout">
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
