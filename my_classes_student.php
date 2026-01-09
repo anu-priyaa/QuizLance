@@ -17,6 +17,13 @@ $student_id = $_SESSION['user_id'];
 $res = mysqli_query($conn, "SELECT name, profile_pic FROM Students WHERE id=$student_id");
 $student = mysqli_fetch_assoc($res);
 
+$student_name = $student['name'];
+$profile_pic  = $student['profile_pic'];
+
+$imgSrc = $profile_pic
+    ? htmlspecialchars($profile_pic) . '?t=' . time()
+    : 'https://via.placeholder.com/85';
+
 /* FETCH JOINED CLASSES */
 $classes = mysqli_query(
     $conn,
@@ -31,14 +38,35 @@ $classes = mysqli_query(
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Classes | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
-<?php /* SAME CSS AS STUDENT DASHBOARD */ ?>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
 
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
+
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -46,7 +74,19 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
@@ -59,15 +99,17 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     width:85px;
     height:85px;
     border-radius:50%;
-    border:3px solid #5d9415;
     object-fit:cover;
+    border:3px solid #5d9415;
 }
 
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
+    font-weight:bold;
 }
 
+/* MENU */
 .sidebar a {
     padding:15px 25px;
     text-decoration:none;
@@ -92,12 +134,24 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
+/* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    padding:40px;
-    flex:1;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== PAGE TITLE ===== */
+.page-title {
+    color:#5A0E24;
+    margin-bottom:25px;
+}
+
+/* ===== CLASS GRID ===== */
 .class-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
@@ -121,12 +175,17 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar collapsed no-transition" id="sidebar">
 
     <div class="sidebar-profile">
-        <img src="<?= $student['profile_pic'] ?: 'https://via.placeholder.com/85' ?>">
-        <h3><?= htmlspecialchars($student['name']) ?></h3>
+        <img src="<?= $imgSrc ?>">
+        <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
     <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
@@ -142,15 +201,16 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
-    <h2 style="color:#5A0E24; margin-bottom:20px;">My Classes</h2>
+<div class="main-content full" id="mainContent">
+
+    <h2 class="page-title">My Classes</h2>
 
     <div class="class-grid">
         <?php if (mysqli_num_rows($classes) > 0): ?>
             <?php while ($row = mysqli_fetch_assoc($classes)): ?>
                 <div class="class-card">
                     <h3><?= htmlspecialchars($row['class_name']) ?></h3>
-                    <p><b>Class Code:</b> <?= $row['class_code'] ?></p>
+                    <p><b>Class Code:</b> <?= htmlspecialchars($row['class_code']) ?></p>
                     <p><b>Teacher:</b> <?= htmlspecialchars($row['teacher_name']) ?></p>
                 </div>
             <?php endwhile; ?>
@@ -158,7 +218,37 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
             <p>You have not joined any classes yet.</p>
         <?php endif; ?>
     </div>
+
 </div>
+
+<script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+/* toggle sidebar only on click */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
+</script>
 
 </body>
 </html>

@@ -16,8 +16,13 @@ $student_id = $_SESSION['user_id'];
 /* STUDENT INFO */
 $res = mysqli_query($conn, "SELECT name, profile_pic FROM Students WHERE id=$student_id");
 $student = mysqli_fetch_assoc($res);
+
 $student_name = $student['name'];
 $profile_pic  = $student['profile_pic'];
+
+$imgSrc = $profile_pic
+    ? htmlspecialchars($profile_pic) . '?t=' . time()
+    : 'https://via.placeholder.com/85';
 
 /* FETCH QUIZZES ATTEMPTED BY STUDENT */
 $quiz_res = mysqli_query($conn,
@@ -42,14 +47,35 @@ if ($selected_quiz) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Results | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
 
-/* SIDEBAR */
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
+
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -57,7 +83,19 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
@@ -74,8 +112,13 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border:3px solid #5d9415;
 }
 
-.sidebar-profile h3 { margin-top:10px; font-size:16px; }
+.sidebar-profile h3 {
+    margin-top:10px;
+    font-size:16px;
+    font-weight:bold;
+}
 
+/* MENU */
 .sidebar a {
     padding:15px 25px;
     text-decoration:none;
@@ -84,7 +127,10 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     align-items:center;
 }
 
-.sidebar a i { margin-right:15px; width:20px; }
+.sidebar a i {
+    margin-right:15px;
+    width:20px;
+}
 
 .sidebar a:hover,
 .sidebar a.active {
@@ -97,16 +143,24 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* MAIN CONTENT */
+/* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    padding:40px;
-    flex:1;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
-h1 { color:#5A0E24; margin-bottom:20px; }
+.main-content.full {
+    margin-left:0;
+}
 
-/* CARD */
+/* ===== PAGE TITLE ===== */
+.page-title {
+    color:#5A0E24;
+    margin-bottom:20px;
+}
+
+/* ===== CARD ===== */
 .card {
     background:white;
     padding:30px;
@@ -117,7 +171,7 @@ h1 { color:#5A0E24; margin-bottom:20px; }
 
 /* SELECT */
 select {
-    padding:10px;
+    padding:12px;
     border-radius:6px;
     border:1px solid #ccc;
     min-width:260px;
@@ -139,37 +193,33 @@ select {
     border-left:5px solid #5d9415;
 }
 
-.result-card h3 { color:#5A0E24; }
+.result-card h3 {
+    color:#5A0E24;
+}
 </style>
 </head>
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar collapsed no-transition" id="sidebar">
 
     <div class="sidebar-profile">
-        <img src="<?= $profile_pic ?: 'https://via.placeholder.com/85' ?>">
+        <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
-    <a href="student_dashboard.php">
-        <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="join_class.php">
-        <i class="fas fa-users"></i> Join Class
-    </a>
-    <a href="my_classes_student.php">
-        <i class="fas fa-chalkboard"></i> My Classes
-    </a>
-    <a href="view_result_student.php" class="active">
-        <i class="fas fa-chart-line"></i> Results
-    </a>
-    <a href="leaderboard.php">
-        <i class="fas fa-trophy"></i> Leaderboard
-    </a>
-    <a href="profile_student.php">
-        <i class="fas fa-user-edit"></i> Profile
-    </a>
+
+    <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
+    <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="view_result_student.php" class="active"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
+    <a href="profile_student.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -177,14 +227,14 @@ select {
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
+<div class="main-content full" id="mainContent">
 
-    <h1>My Quiz Results</h1>
+    <h1 class="page-title">My Quiz Results</h1>
 
     <div class="card">
 
         <form method="GET">
-            <label>Select Quiz:</label><br><br>
+            <label><strong>Select Quiz</strong></label><br><br>
             <select name="quiz_id" onchange="this.form.submit()" required>
                 <option value="">-- Select Quiz --</option>
                 <?php while ($q = mysqli_fetch_assoc($quiz_res)) { ?>
@@ -220,6 +270,35 @@ select {
 
     </div>
 </div>
+
+<script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+/* toggle sidebar only on click */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
+</script>
 
 </body>
 </html>

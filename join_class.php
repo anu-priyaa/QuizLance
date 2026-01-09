@@ -13,12 +13,16 @@ if (!$conn) {
 
 $student_id = $_SESSION['user_id'];
 
-/* FETCH STUDENT INFO FOR SIDEBAR */
+/* FETCH STUDENT INFO */
 $res = mysqli_query($conn, "SELECT name, profile_pic FROM Students WHERE id=$student_id");
 $student = mysqli_fetch_assoc($res);
 
 $student_name = $student['name'];
 $profile_pic  = $student['profile_pic'];
+
+$imgSrc = $profile_pic
+    ? htmlspecialchars($profile_pic) . '?t=' . time()
+    : 'https://via.placeholder.com/85';
 
 /* JOIN CLASS */
 if (isset($_POST['join_class'])) {
@@ -29,7 +33,6 @@ if (isset($_POST['join_class'])) {
         $error = "Class code is required";
     } else {
 
-        /* CHECK CLASS */
         $classRes = mysqli_query(
             $conn,
             "SELECT id FROM Classes WHERE class_code='$class_code'"
@@ -41,7 +44,6 @@ if (isset($_POST['join_class'])) {
             $class = mysqli_fetch_assoc($classRes);
             $class_id = $class['id'];
 
-            /* CHECK IF ALREADY JOINED */
             $check = mysqli_query(
                 $conn,
                 "SELECT id FROM class_students 
@@ -51,14 +53,11 @@ if (isset($_POST['join_class'])) {
             if (mysqli_num_rows($check) > 0) {
                 $error = "You have already joined this class";
             } else {
-
-                /* JOIN CLASS */
                 mysqli_query(
                     $conn,
                     "INSERT INTO class_students (class_id, student_id)
                      VALUES ($class_id, $student_id)"
                 );
-
                 $success = "Successfully joined the class!";
             }
         }
@@ -69,14 +68,35 @@ if (isset($_POST['join_class'])) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Join Class | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
 
-/* SIDEBAR */
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
+
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -84,7 +104,19 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
@@ -97,13 +129,14 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     width:85px;
     height:85px;
     border-radius:50%;
-    border:3px solid #5d9415;
     object-fit:cover;
+    border:3px solid #5d9415;
 }
 
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
+    font-weight:bold;
 }
 
 .sidebar a {
@@ -130,27 +163,33 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* MAIN CONTENT */
+/* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
-.card {
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== PAGE CARD ===== */
+.page-card {
     background:white;
-    padding:50px;
+    padding:40px;
     border-radius:15px;
-    max-width:450px;
+    max-width:480px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
 }
 
-.card h2 {
+.page-card h1 {
     color:#5A0E24;
-    margin-bottom:30px;
+    margin-bottom:25px;
 }
 
+/* FORM */
 .form-group {
     margin-bottom:18px;
 }
@@ -194,19 +233,23 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar collapsed no-transition" id="sidebar">
 
     <div class="sidebar-profile">
-        <img src="<?= $profile_pic ?: 'https://via.placeholder.com/85' ?>">
+        <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
     <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="join_class.php" class="active"><i class="fas fa-users"></i> Join Class</a>
-    <a href="my_classes_student.php">
-    <i class="fas fa-chalkboard"></i> My Classes</a>
-    <a href="results.php"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
     <a href="profile_student.php"><i class="fas fa-user-edit"></i> Profile</a>
 
@@ -216,10 +259,10 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
+<div class="main-content full" id="mainContent">
 
-    <div class="card">
-        <h2>Join a Class</h2>
+    <div class="page-card">
+        <h1>Join a Class</h1>
 
         <form method="POST">
             <div class="form-group">
@@ -235,6 +278,35 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 
 </div>
+
+<script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+/* toggle sidebar only on menu click */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
+</script>
 
 </body>
 </html>

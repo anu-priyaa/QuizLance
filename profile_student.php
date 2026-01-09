@@ -16,7 +16,7 @@ $student_id = $_SESSION['user_id'];
 /* FETCH STUDENT INFO */
 $res = mysqli_query(
     $conn,
-    "SELECT name, username, email, profile_pic 
+    "SELECT name, username, profile_pic 
      FROM Students WHERE id = $student_id"
 );
 $student = mysqli_fetch_assoc($res);
@@ -24,7 +24,10 @@ $student = mysqli_fetch_assoc($res);
 $student_name = $student['name'];
 $profile_pic  = $student['profile_pic'];
 
-/* UPDATE PROFILE */
+$imgSrc = $profile_pic
+    ? htmlspecialchars($profile_pic) . '?t=' . time()
+    : 'https://via.placeholder.com/85';
+
 /* UPDATE PROFILE */
 if (isset($_POST['update_profile'])) {
 
@@ -69,18 +72,38 @@ if (isset($_POST['update_profile'])) {
         exit();
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Profile | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
+
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -90,14 +113,25 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
     text-align:center;
     padding:25px 15px;
     border-bottom:1px solid rgba(255,255,255,0.15);
-    cursor:pointer;
 }
 
 .sidebar-profile img {
@@ -111,6 +145,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
+    font-weight:bold;
 }
 
 .sidebar a {
@@ -132,15 +167,23 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:white;
 }
 
-.logout { margin-top:auto; }
+.logout {
+    margin-top:auto;
+    border-top:1px solid rgba(255,255,255,0.15);
+}
 
 /* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== PROFILE CARD ===== */
 .card {
     background:white;
     padding:30px;
@@ -160,7 +203,12 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 .form-group { margin-bottom:15px; }
 .form-group label { font-weight:bold; }
-.form-group input { width:100%; padding:10px; }
+.form-group input {
+    width:100%;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
 
 .btn {
     background:#5d9415;
@@ -168,51 +216,30 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     padding:10px 18px;
     border:none;
     border-radius:6px;
+    font-weight:bold;
     cursor:pointer;
 }
 
-.alert-error { color:red; font-weight:bold; margin-top:10px; }
-
-/* ===== PROFILE POPUP ===== */
-.profile-popup {
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.5);
-    justify-content:center;
-    align-items:center;
-}
-
-.profile-popup-content {
-    background:white;
-    padding:30px;
-    border-radius:15px;
-    text-align:center;
-    position:relative;
-}
-
-.profile-popup-content img {
-    width:200px;
-    height:200px;
-    border-radius:50%;
-    border:4px solid #5d9415;
-}
-
-.close-btn {
-    position:absolute;
-    top:10px;
-    right:14px;
-    font-size:22px;
-    cursor:pointer;
+.alert-error {
+    color:red;
+    font-weight:bold;
+    margin-top:10px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-    <div class="sidebar-profile" onclick="openProfilePopup()">
-        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85' ?>">
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar collapsed no-transition" id="sidebar">
+
+    <div class="sidebar-profile">
+        <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
@@ -228,13 +255,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 </div>
 
-<div class="main-content">
+<!-- MAIN CONTENT -->
+<div class="main-content full" id="mainContent">
+
     <div class="card">
         <h2>My Profile</h2>
 
-        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/120' ?>" class="profile-pic-large">
+        <img src="<?= $imgSrc ?>" class="profile-pic-large">
 
-        <form method="POST" action="profile_student.php" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label>Profile Picture</label>
                 <input type="file" name="profile_pic">
@@ -255,23 +284,36 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
         <?php if (isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
     </div>
-</div>
 
-<div id="profilePopup" class="profile-popup">
-    <div class="profile-popup-content">
-        <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
-        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/200' ?>">
-        <h2><?= htmlspecialchars($student_name) ?></h2>
-    </div>
 </div>
 
 <script>
-function openProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'flex';
-}
-function closeProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'none';
-}
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+/* toggle sidebar only on menu click */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
 </script>
 
 </body>
