@@ -152,7 +152,6 @@ select {
         <img src="<?= $profile_pic ?: 'https://via.placeholder.com/85' ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
-
     <a href="student_dashboard.php">
         <i class="fas fa-home"></i> Dashboard
     </a>

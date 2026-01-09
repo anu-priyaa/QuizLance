@@ -22,7 +22,6 @@ $teacher = mysqli_fetch_assoc($res);
 $teacher_name = $teacher['name'];
 $profile_pic  = $teacher['profile_pic'];
 
-/* CACHE BUSTER */
 $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
@@ -37,7 +36,27 @@ $imgSrc = $profile_pic
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
+
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -47,7 +66,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
 }
 
 .sidebar-profile {
@@ -68,7 +95,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
-    font-weight:bold;
 }
 
 .sidebar a {
@@ -82,7 +108,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar a i {
     margin-right:15px;
     width:20px;
-    text-align:center;
 }
 
 .sidebar a:hover,
@@ -99,11 +124,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 /* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
-/* WELCOME CARD */
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== WELCOME CARD ===== */
 .welcome-card {
     background:white;
     padding:30px;
@@ -115,7 +144,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 .welcome-card h1 { color:#5A0E24; }
 
-/* DASHBOARD GRID */
+/* ===== DASHBOARD GRID ===== */
 .dashboard-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
@@ -150,7 +179,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.5);
-    z-index:999;
+    z-index:2000;
     justify-content:center;
     align-items:center;
 }
@@ -168,7 +197,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     width:200px;
     height:200px;
     border-radius:50%;
-    object-fit:cover;
     border:4px solid #5d9415;
 }
 
@@ -179,42 +207,43 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     font-size:22px;
     cursor:pointer;
 }
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left:0;
+    }
+}
 </style>
 </head>
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar collapsed" id="sidebar">
 
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
-    <a href="teacher_dashboard.php" class="active">
-        <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="my_classes.php">
-        <i class="fas fa-users"></i> My Classes
-    </a>
-    <a href="view_attendance_teacher.php">
-        <i class="fas fa-clipboard-list"></i> Attendance
-    </a>
-    <a href="profile_teacher.php">
-        <i class="fas fa-user-edit"></i> Profile
-    </a>
-
+    <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
+    <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
+    <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
-        <a href="logout.php">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
+<div class="main-content full" id="mainContent">
 
     <div class="welcome-card">
         <h1>Welcome to QuizLance, <?= htmlspecialchars($teacher_name) ?>!</h1>
@@ -222,35 +251,13 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 
     <div class="dashboard-grid">
-
-        <a href="create_quiz.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-plus-square"></i><h3>Create Quiz</h3></div>
-        </a>
-
-        <a href="scheduled_quizzes.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-calendar-alt"></i><h3>Scheduled Quizzes</h3></div>
-        </a>
-
-        <a href="live_quiz.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-broadcast-tower"></i><h3>Live Quiz</h3></div>
-        </a>
-
-        <a href="view_result_teacher.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-chart-line"></i><h3>Results & Analytics</h3></div>
-        </a>
-
-        <a href="leaderboard.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-trophy"></i><h3>Leaderboard</h3></div>
-        </a>
-
-        <a href="certificates.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-award"></i><h3>Certificates</h3></div>
-        </a>
-
-        <a href="doubts.php" class="menu-link">
-            <div class="menu-card"><i class="fas fa-question-circle"></i><h3>Student Doubts</h3></div>
-        </a>
-
+        <a href="create_quiz.php" class="menu-link"><div class="menu-card"><i class="fas fa-plus-square"></i><h3>Create Quiz</h3></div></a>
+        <a href="scheduled_quizzes.php" class="menu-link"><div class="menu-card"><i class="fas fa-calendar-alt"></i><h3>Scheduled Quizzes</h3></div></a>
+        <a href="live_quiz.php" class="menu-link"><div class="menu-card"><i class="fas fa-broadcast-tower"></i><h3>Live Quiz</h3></div></a>
+        <a href="view_result_teacher.php" class="menu-link"><div class="menu-card"><i class="fas fa-chart-line"></i><h3>Results & Analytics</h3></div></a>
+        <a href="leaderboard.php" class="menu-link"><div class="menu-card"><i class="fas fa-trophy"></i><h3>Leaderboard</h3></div></a>
+        <a href="certificates.php" class="menu-link"><div class="menu-card"><i class="fas fa-award"></i><h3>Certificates</h3></div></a>
+        <a href="doubts.php" class="menu-link"><div class="menu-card"><i class="fas fa-question-circle"></i><h3>Student Doubts</h3></div></a>
     </div>
 </div>
 
@@ -258,12 +265,21 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
-        <img src="<?= $profile_pic ? htmlspecialchars($profile_pic) . '?t=' . time() : 'https://via.placeholder.com/200' ?>">
+        <img src="<?= $imgSrc ?>">
         <h2><?= htmlspecialchars($teacher_name) ?></h2>
     </div>
 </div>
 
 <script>
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+};
+
 function openProfilePopup() {
     document.getElementById('profilePopup').style.display = 'flex';
 }

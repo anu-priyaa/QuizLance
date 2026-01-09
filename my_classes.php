@@ -20,14 +20,11 @@ $teacher = mysqli_fetch_assoc($res);
 $teacher_name = $teacher['name'];
 $profile_pic  = $teacher['profile_pic'];
 
-/* CACHE-BUSTED IMAGE SRC */
 $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* =========================
-   CREATE CLASS
-   ========================= */
+/* CREATE CLASS */
 if (isset($_POST['create_class'])) {
     $class_name = trim(mysqli_real_escape_string($conn, $_POST['class_name']));
 
@@ -39,8 +36,7 @@ if (isset($_POST['create_class'])) {
             $check = mysqli_query($conn, "SELECT id FROM Classes WHERE class_code='$class_code'");
         } while (mysqli_num_rows($check) > 0);
 
-        mysqli_query(
-            $conn,
+        mysqli_query($conn,
             "INSERT INTO Classes (teacher_id, class_name, class_code)
              VALUES ($teacher_id, '$class_name', '$class_code')"
         );
@@ -64,7 +60,27 @@ $classes = mysqli_query(
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
+
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -74,8 +90,22 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
 }
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+/* Prevent animation on page load */
+.sidebar.no-transition {
+    transition: none !important;
+}
+
 
 .sidebar-profile {
     text-align:center;
@@ -108,7 +138,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar a i {
     margin-right:15px;
     width:20px;
-    text-align:center;
 }
 
 .sidebar a:hover,
@@ -125,10 +154,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 /* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== CARD ===== */
 .card {
     background:white;
     padding:30px;
@@ -141,12 +175,11 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .card h2 { color:#5A0E24; margin-bottom:20px; }
 
 .form-group { margin-bottom:15px; }
-.form-group label { font-weight:bold; }
 .form-group input {
     width:100%;
     padding:10px;
-    border:1px solid #ccc;
     border-radius:5px;
+    border:1px solid #ccc;
 }
 
 .btn {
@@ -177,7 +210,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 }
 
 .class-card h3 { color:#5A0E24; }
-.class-code { font-weight:bold; font-size:18px; }
 
 /* ===== PROFILE POPUP ===== */
 .profile-popup {
@@ -185,7 +217,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.5);
-    z-index:999;
+    z-index:2000;
     justify-content:center;
     align-items:center;
 }
@@ -194,9 +226,8 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     background:white;
     padding:30px;
     border-radius:15px;
-    text-align:center;
     width:300px;
-    position:relative;
+    text-align:center;
 }
 
 .profile-popup-content img {
@@ -218,8 +249,14 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar collapsed no-transition" id="sidebar">
+
 
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
@@ -228,9 +265,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php" class="active"><i class="fas fa-users"></i> My Classes</a>
-    <a href="view_attendance_teacher.php">
-        <i class="fas fa-clipboard-list"></i> Attendance
-    </a>
+    <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
     <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
@@ -239,7 +274,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
+<div class="main-content full" id="mainContent">
 
     <div class="card">
         <h2>Create Class</h2>
@@ -262,7 +297,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
         <div class="class-card">
             <h3><?= htmlspecialchars($row['class_name']) ?></h3>
             <p>Class Code</p>
-            <div class="class-code"><?= htmlspecialchars($row['class_code']) ?></div>
+            <strong><?= htmlspecialchars($row['class_code']) ?></strong>
         </div>
         <?php endwhile; ?>
     </div>
@@ -273,12 +308,44 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
-        <img src="<?= $profile_pic ? htmlspecialchars($profile_pic) . '?t=' . time() : 'https://via.placeholder.com/200' ?>">
+        <img src="<?= $imgSrc ?>">
         <h2><?= htmlspecialchars($teacher_name) ?></h2>
     </div>
 </div>
 
 <script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* ===== RESTORE SIDEBAR STATE (NO POP-UP) ===== */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+
+    /* Enable animation AFTER layout is correct */
+    setTimeout(() => {
+        sidebar.classList.remove('no-transition');
+    }, 50);
+});
+
+/* ===== TOGGLE ONLY ON MENU CLICK ===== */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    if (sidebar.classList.contains('collapsed')) {
+        sessionStorage.setItem('sidebar', 'closed');
+    } else {
+        sessionStorage.setItem('sidebar', 'open');
+    }
+};
+
+/* PROFILE POPUP */
 function openProfilePopup() {
     document.getElementById('profilePopup').style.display = 'flex';
 }
@@ -286,6 +353,9 @@ function closeProfilePopup() {
     document.getElementById('profilePopup').style.display = 'none';
 }
 </script>
+
+
+
 
 </body>
 </html>

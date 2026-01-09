@@ -45,7 +45,6 @@ if (isset($_POST['update_profile'])) {
                 mkdir("uploads/teachers", 0777, true);
             }
 
-            // UNIQUE IMAGE NAME (NO CACHE ISSUE)
             $newName = "teacher_" . $teacher_id . "_" . time() . "." . $ext;
             $uploadPath = "uploads/teachers/" . $newName;
 
@@ -75,13 +74,35 @@ if (isset($_POST['update_profile'])) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Profile | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
 
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
+
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -89,7 +110,19 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
@@ -123,8 +156,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar a i {
     margin-right:15px;
     width:20px;
-    text-align:center;
-    font-size:16px;
 }
 
 .sidebar a:hover,
@@ -133,14 +164,23 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:white;
 }
 
-.logout { margin-top:auto; }
-
-.main-content {
-    margin-left:260px;
-    flex:1;
-    padding:40px;
+.logout {
+    margin-top:auto;
+    border-top:1px solid rgba(255,255,255,0.15);
 }
 
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    margin-left:260px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
+}
+
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== PROFILE CARD ===== */
 .card {
     background:white;
     padding:30px;
@@ -173,11 +213,13 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 .alert-error { color:red; font-weight:bold; margin-top:10px; }
 
+/* ===== PROFILE POPUP ===== */
 .profile-popup {
     display:none;
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.5);
+    z-index:2000;
     justify-content:center;
     align-items:center;
 }
@@ -209,7 +251,14 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 <body>
 
-<div class="sidebar">
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar collapsed no-transition" id="sidebar">
+
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85' ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
@@ -217,9 +266,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="view_attendance_teacher.php">
-        <i class="fas fa-clipboard-list"></i> Attendance
-    </a>
+    <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
     <a href="profile_teacher.php" class="active"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
@@ -227,13 +274,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 </div>
 
-<div class="main-content">
+<!-- MAIN CONTENT -->
+<div class="main-content full" id="mainContent">
+
     <div class="card">
         <h2>My Profile</h2>
 
         <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/120' ?>" class="profile-pic-large">
 
-        <form method="POST" action="profile_teacher.php" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label>Profile Picture</label>
                 <input type="file" name="profile_pic">
@@ -249,8 +298,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
                 <input type="text" name="username" value="<?= htmlspecialchars($teacher['username']) ?>" required>
             </div>
 
-            
-
             <button class="btn" name="update_profile">Update Profile</button>
         </form>
 
@@ -258,6 +305,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 </div>
 
+<!-- PROFILE POPUP -->
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
@@ -267,6 +315,30 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 </div>
 
 <script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
+
 function openProfilePopup() {
     document.getElementById('profilePopup').style.display = 'flex';
 }

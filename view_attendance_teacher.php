@@ -40,7 +40,27 @@ $quiz_res = mysqli_query(
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
+
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -50,7 +70,20 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
+}
+
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+/* prevent animation on page load */
+.sidebar.no-transition {
+    transition:none !important;
 }
 
 .sidebar-profile {
@@ -71,7 +104,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
-    font-weight:bold;
 }
 
 .sidebar a {
@@ -85,7 +117,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 .sidebar a i {
     margin-right:15px;
     width:20px;
-    text-align:center;
 }
 
 .sidebar a:hover,
@@ -99,21 +130,25 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* ===== MAIN CONTENT ===== */
+/* ===== MAIN CONTENT (SAME AS DASHBOARD) ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
-/* ===== PAGE CARD (same as welcome-card style) ===== */
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== PAGE CARD (MATCH WELCOME CARD STYLE) ===== */
 .page-card {
     background:white;
     padding:30px;
     border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
-    max-width:500px;
+    max-width:520px;
 }
 
 .page-card h1 {
@@ -127,62 +162,60 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 }
 
 /* FORM */
-select, button {
+select {
     width:100%;
     padding:12px;
     border-radius:6px;
     border:1px solid #ccc;
-    margin-bottom:15px;
+    margin-bottom:20px;
 }
 
 button {
     background:#5d9415;
     color:white;
-    position:relative;
+    padding:12px 18px;
     border:none;
-    width:auto;
+    border-radius:6px;
     font-weight:bold;
     cursor:pointer;
 }
+
 button:hover {
     background:#4e7d12;
-    transform: translateY(-2px);
+    transform:translateY(-2px);
 }
 </style>
 </head>
 
 <body>
 
-<!-- ===== SIDEBAR ===== -->
-<div class="sidebar">
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar collapsed no-transition" id="sidebar">
 
     <div class="sidebar-profile">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
-    <a href="teacher_dashboard.php">
-        <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="my_classes.php">
-        <i class="fas fa-users"></i> My Classes
-    </a>
+    <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="view_attendance_teacher.php" class="active">
         <i class="fas fa-clipboard-list"></i> Attendance
     </a>
-    <a href="profile_teacher.php">
-        <i class="fas fa-user-edit"></i> Profile
-    </a>
+    <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
-        <a href="logout.php">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </div>
 
-<!-- ===== MAIN CONTENT ===== -->
-<div class="main-content">
+<!-- MAIN CONTENT -->
+<div class="main-content full" id="mainContent">
 
     <div class="page-card">
         <h1>Quiz Attendance</h1>
@@ -199,13 +232,38 @@ button:hover {
                 <?php endwhile; ?>
             </select>
 
-            <button type="submit">
-                Download Attendance
-            </button>
+            <button type="submit">Download Attendance</button>
         </form>
     </div>
 
 </div>
+
+<script>
+const menuToggle  = document.getElementById('menuToggle');
+const sidebar     = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+/* restore sidebar state without animation */
+window.addEventListener('DOMContentLoaded', () => {
+    const state = sessionStorage.getItem('sidebar');
+    if (state === 'open') {
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('full');
+    }
+    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
+});
+
+/* toggle sidebar only on click */
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+
+    sessionStorage.setItem(
+        'sidebar',
+        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
+    );
+};
+</script>
 
 </body>
 </html>

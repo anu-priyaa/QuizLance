@@ -15,6 +15,10 @@ $student = mysqli_fetch_assoc($res);
 
 $student_name = $student['name'];
 $profile_pic  = $student['profile_pic'];
+
+$imgSrc = $profile_pic
+    ? htmlspecialchars($profile_pic) . '?t=' . time()
+    : 'https://via.placeholder.com/85';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,7 +30,27 @@ $profile_pic  = $student['profile_pic'];
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+body { background:#f0f2f5; }
+
+/* ===== TOP BAR ===== */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:60px;
+    background:#5A0E24;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    z-index:1001;
+}
+
+.topbar i {
+    font-size:24px;
+    cursor:pointer;
+}
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -36,10 +60,18 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     display:flex;
     flex-direction:column;
     position:fixed;
-    height:100vh;
+    top:60px;
+    left:0;
+    height:calc(100vh - 60px);
+    transition:0.3s ease;
+    z-index:1000;
 }
 
-/* PROFILE SECTION */
+.sidebar.collapsed {
+    transform:translateX(-100%);
+}
+
+/* PROFILE */
 .sidebar-profile {
     text-align:center;
     padding:25px 15px;
@@ -68,7 +100,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:#d1d1d1;
     display:flex;
     align-items:center;
-    transition:0.3s;
 }
 
 .sidebar a i {
@@ -90,11 +121,15 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 /* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px;
+    transition:0.3s ease;
 }
 
-/* WELCOME CARD */
+.main-content.full {
+    margin-left:0;
+}
+
+/* ===== WELCOME CARD ===== */
 .welcome-card {
     background:white;
     padding:30px;
@@ -106,7 +141,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
 
 .welcome-card h1 { color:#5A0E24; }
 
-/* DASHBOARD GRID */
+/* ===== DASHBOARD GRID ===== */
 .dashboard-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
@@ -122,12 +157,10 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     text-align:center;
     box-shadow:0 2px 10px rgba(0,0,0,0.03);
     transition:0.3s;
-    border-bottom:4px solid transparent;
 }
 
 .menu-card:hover {
     transform:translateY(-5px);
-    border-bottom:4px solid #5d9415;
     box-shadow:0 10px 20px rgba(0,0,0,0.1);
 }
 
@@ -136,89 +169,38 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     color:#5A0E24;
     margin-bottom:15px;
 }
-
-.menu-card h3 { font-size:18px; color:#333; }
-
-/* ===== PROFILE POPUP ===== */
-.profile-popup {
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.5);
-    z-index:999;
-    justify-content:center;
-    align-items:center;
-}
-
-.profile-popup-content {
-    background:white;
-    padding:30px;
-    border-radius:15px;
-    text-align:center;
-    width:300px;
-    position:relative;
-}
-
-.profile-popup-content img {
-    width:200px;
-    height:200px;
-    border-radius:50%;
-    object-fit:cover;
-    border:4px solid #5d9415;
-    margin-bottom:15px;
-}
-
-.profile-popup-content h2 { color:#5A0E24; }
-
-.close-btn {
-    position:absolute;
-    top:10px;
-    right:14px;
-    font-size:22px;
-    cursor:pointer;
-    font-weight:bold;
-}
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars" id="menuToggle"></i>
+</div>
 
-    <div class="sidebar-profile" onclick="openProfilePopup()">
-        <img src="<?= $profile_pic ? htmlspecialchars($profile_pic) : 'https://via.placeholder.com/85' ?>">
+<!-- SIDEBAR -->
+<div class="sidebar collapsed" id="sidebar">
+
+    <div class="sidebar-profile">
+        <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
-    <a href="student_dashboard.php" class="active">
-        <i class="fas fa-home"></i> Dashboard
-    </a>
-    <a href="join_class.php">
-        <i class="fas fa-users"></i> Join Class
-    </a>
-    <a href="my_classes_student.php">
-    <i class="fas fa-chalkboard"></i> My Classes
-</a>
-    <a href="view_result_student.php">
-        <i class="fas fa-chart-line"></i> Results
-    </a>
-    <a href="leaderboard.php">
-        <i class="fas fa-trophy"></i> Leaderboard
-    </a>
-    <a href="profile_student.php">
-        <i class="fas fa-user-edit"></i> Profile
-    </a>
+    <a href="student_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
+    <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
+    <a href="profile_student.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
-        <a href="logout.php">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
+        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content">
+<div class="main-content full" id="mainContent">
 
     <div class="welcome-card">
         <h1>Welcome to QuizLance, <?= htmlspecialchars($student_name) ?>!</h1>
@@ -226,50 +208,29 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     </div>
 
     <div class="dashboard-grid">
-
         <a href="live_quizzes.php" class="menu-link">
-            <div class="menu-card">
-                <i class="fas fa-play-circle"></i>
-                <h3>Live Quiz</h3>
-            </div>
+            <div class="menu-card"><i class="fas fa-play-circle"></i><h3>Live Quiz</h3></div>
         </a>
 
         <a href="scheduled_quizzes_student.php" class="menu-link">
-            <div class="menu-card">
-                <i class="fas fa-clock"></i>
-                <h3>Scheduled Quizzes</h3>
-            </div>
+            <div class="menu-card"><i class="fas fa-clock"></i><h3>Scheduled Quizzes</h3></div>
         </a>
 
         <a href="certificates.php" class="menu-link">
-            <div class="menu-card">
-                <i class="fas fa-award"></i>
-                <h3>Certificates</h3>
-            </div>
+            <div class="menu-card"><i class="fas fa-award"></i><h3>Certificates</h3></div>
         </a>
-
-    </div>
-</div>
-
-<!-- PROFILE POPUP -->
-<div id="profilePopup" class="profile-popup">
-    <div class="profile-popup-content">
-        <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
-        <img src="<?= $profile_pic ? htmlspecialchars($profile_pic) : 'https://via.placeholder.com/120' ?>">
-        <h2><?= htmlspecialchars($student_name) ?></h2>
     </div>
 </div>
 
 <script>
-function openProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'flex';
-}
-function closeProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'none';
-}
-document.getElementById('profilePopup').addEventListener('click', function(e) {
-    if (e.target === this) closeProfilePopup();
-});
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+};
 </script>
 
 </body>
