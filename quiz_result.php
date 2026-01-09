@@ -19,13 +19,13 @@ if (!isset($_GET['attempt_id'])) {
 
 $attempt_id = (int)$_GET['attempt_id'];
 
-/* FETCH ATTEMPT + QUIZ INFO */
+/* FETCH ATTEMPT + QUIZ INFO (INCLUDING PASS MARKS) */
 $res = mysqli_query(
     $conn,
-    "SELECT qa.score, q.title, q.id AS quiz_id
+    "SELECT qa.score, q.title, q.id AS quiz_id, q.pass_marks
      FROM quiz_attempts qa
      JOIN quizzes q ON qa.quiz_id = q.id
-     WHERE qa.id=$attempt_id AND qa.student_id=$student_id"
+     WHERE qa.id = $attempt_id AND qa.student_id = $student_id"
 );
 
 if (mysqli_num_rows($res) === 0) {
@@ -37,9 +37,14 @@ $data = mysqli_fetch_assoc($res);
 /* TOTAL MARKS */
 $totalRes = mysqli_query(
     $conn,
-    "SELECT SUM(marks) AS total_marks FROM questions WHERE quiz_id=" . $data['quiz_id']
+    "SELECT SUM(marks) AS total_marks 
+     FROM questions 
+     WHERE quiz_id = " . $data['quiz_id']
 );
 $total = mysqli_fetch_assoc($totalRes);
+
+/* PASS / FAIL LOGIC */
+$passed = ($data['score'] >= $data['pass_marks']);
 
 /* STUDENT INFO */
 $stuRes = mysqli_query(
@@ -66,7 +71,7 @@ body { background:#f0f2f5; padding:40px; }
     padding:35px;
     border-radius:16px;
     box-shadow:0 4px 15px rgba(0,0,0,0.08);
-    border-left:6px solid #5d9415;
+    border-left:6px solid <?= $passed ? '#5d9415' : '#d32f2f' ?>;
     text-align:center;
 }
 
@@ -90,7 +95,7 @@ body { background:#f0f2f5; padding:40px; }
 
 .score-box h1 {
     font-size:48px;
-    color:#5d9415;
+    color:<?= $passed ? '#5d9415' : '#d32f2f' ?>;
 }
 
 .score-box p {
@@ -100,7 +105,14 @@ body { background:#f0f2f5; padding:40px; }
 
 .status {
     font-weight:bold;
-    color:#2e7d32;
+    margin-bottom:15px;
+    color:<?= $passed ? '#2e7d32' : '#c62828' ?>;
+    font-size:18px;
+}
+
+.message {
+    font-size:15px;
+    color:#444;
     margin-bottom:30px;
 }
 
@@ -132,7 +144,15 @@ body { background:#f0f2f5; padding:40px; }
     </div>
 
     <div class="status">
-        Status: Completed ✔
+        <?= $passed ? 'Test Passed ✅' : 'Test Failed ❌' ?>
+    </div>
+
+    <div class="message">
+        <?php if ($passed): ?>
+            🎊 Congratulations! You have successfully passed this quiz. Keep up the great work!
+        <?php else: ?>
+            ⚠️ Don’t worry! You did not meet the passing marks this time. Review the topics and try again.
+        <?php endif; ?>
     </div>
 
     <a href="student_dashboard.php" class="btn">

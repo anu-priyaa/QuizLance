@@ -198,6 +198,9 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     <a href="my_classes.php">
         <i class="fas fa-users"></i> My Classes
     </a>
+    <a href="view_attendance_teacher.php">
+        <i class="fas fa-clipboard-list"></i> Attendance
+    </a>
     <a href="profile_teacher.php">
         <i class="fas fa-user-edit"></i> Profile
     </a>
@@ -232,7 +235,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
             <div class="menu-card"><i class="fas fa-broadcast-tower"></i><h3>Live Quiz</h3></div>
         </a>
 
-        <a href="results.php" class="menu-link">
+        <a href="view_result_teacher.php" class="menu-link">
             <div class="menu-card"><i class="fas fa-chart-line"></i><h3>Results & Analytics</h3></div>
         </a>
 

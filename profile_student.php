@@ -25,11 +25,11 @@ $student_name = $student['name'];
 $profile_pic  = $student['profile_pic'];
 
 /* UPDATE PROFILE */
+/* UPDATE PROFILE */
 if (isset($_POST['update_profile'])) {
 
     $name     = trim(mysqli_real_escape_string($conn, $_POST['name']));
     $username = trim(mysqli_real_escape_string($conn, $_POST['username']));
-    $email    = trim(mysqli_real_escape_string($conn, $_POST['email']));
     $picPath  = $profile_pic;
 
     if (!empty($_FILES['profile_pic']['name'])) {
@@ -45,7 +45,6 @@ if (isset($_POST['update_profile'])) {
                 mkdir("uploads/students", 0777, true);
             }
 
-            // UNIQUE IMAGE NAME (NO CACHE ISSUE)
             $newName = "student_" . $student_id . "_" . time() . "." . $ext;
             $uploadPath = "uploads/students/" . $newName;
 
@@ -61,7 +60,7 @@ if (isset($_POST['update_profile'])) {
         mysqli_query(
             $conn,
             "UPDATE Students 
-             SET name='$name', username='$username', email='$email', profile_pic='$picPath'
+             SET name='$name', username='$username', profile_pic='$picPath'
              WHERE id=$student_id"
         );
 
@@ -70,6 +69,7 @@ if (isset($_POST['update_profile'])) {
         exit();
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -219,7 +219,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
     <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
-    <a href="results.php"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
     <a href="profile_student.php" class="active"><i class="fas fa-user-edit"></i> Profile</a>
 

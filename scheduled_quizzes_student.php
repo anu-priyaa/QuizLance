@@ -166,7 +166,7 @@ th {
 
     <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
     <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
-    <a href="results.php"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
     <a href="profile_student.php"><i class="fas fa-user-edit"></i> Profile</a>
 

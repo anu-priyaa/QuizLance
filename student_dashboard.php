@@ -200,7 +200,7 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     <a href="my_classes_student.php">
     <i class="fas fa-chalkboard"></i> My Classes
 </a>
-    <a href="results.php">
+    <a href="view_result_student.php">
         <i class="fas fa-chart-line"></i> Results
     </a>
     <a href="leaderboard.php">

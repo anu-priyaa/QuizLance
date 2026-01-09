@@ -13,6 +13,19 @@ if (!$conn) {
 
 $teacher_id = $_SESSION['user_id'];
 
+// Ensure timezone and auto-update quiz statuses based on current time
+date_default_timezone_set('Asia/Kolkata');
+
+// 1) Mark quizzes as completed when end_time has passed
+mysqli_query($conn,
+    "UPDATE quizzes SET status='completed' WHERE teacher_id=$teacher_id AND status IN ('scheduled','live') AND end_time < NOW()"
+);
+
+// 2) Mark quizzes as live when within start and end time (only transition from scheduled)
+mysqli_query($conn,
+    "UPDATE quizzes SET status='live' WHERE teacher_id=$teacher_id AND status='scheduled' AND start_time <= NOW() AND end_time >= NOW()"
+);
+
 /* =========================
    ACTIVE SIDEBAR LOGIC
    ========================= */
@@ -172,6 +185,7 @@ body{display:flex;background:#f0f2f5;min-height:100vh;}
     margin-left:260px;
     padding:40px;
     width:100%;
+    text-align:left;
 }
 
 .card{
@@ -180,6 +194,7 @@ body{display:flex;background:#f0f2f5;min-height:100vh;}
     border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
+    text-align:left;
 }
 
 h2{color:#5A0E24;margin-bottom:20px;}
@@ -192,6 +207,7 @@ table{
 th,td{
     padding:14px;
     border-bottom:1px solid #ddd;
+    text-align:left;
 }
 
 th{

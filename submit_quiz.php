@@ -21,6 +21,32 @@ $attempt_id = (int)$_POST['attempt_id'];
 $quiz_id    = (int)$_POST['quiz_id'];
 $answers    = $_POST['answer'];
 
+// fetch attempt and quiz to validate timing
+$attRes = mysqli_query($conn, "SELECT * FROM quiz_attempts WHERE id=$attempt_id LIMIT 1");
+if (mysqli_num_rows($attRes) === 0) {
+    die("Attempt not found");
+}
+$attempt = mysqli_fetch_assoc($attRes);
+if ($attempt['status'] === 'submitted') {
+    header("Location: quiz_result.php?attempt_id=$attempt_id");
+    exit();
+}
+
+$qRes = mysqli_query($conn, "SELECT duration FROM quizzes WHERE id=$quiz_id LIMIT 1");
+if (mysqli_num_rows($qRes) === 0) {
+    die("Quiz not found");
+}
+$qinfo = mysqli_fetch_assoc($qRes);
+$duration = (int)$qinfo['duration'];
+
+$expireTime = strtotime($attempt['started_at']) + ($duration * 60);
+$now = time();
+if ($now > $expireTime) {
+    $submitted_at = date('Y-m-d H:i:s', $expireTime);
+} else {
+    $submitted_at = date('Y-m-d H:i:s', $now);
+}
+
 $total_score = 0;
 $total_marks = 0;
 
@@ -94,9 +120,29 @@ mysqli_query(
      SET score = $total_score,
          total_marks = $total_marks,
          status = 'submitted',
-         submitted_at = NOW()
+         submitted_at = '$submitted_at'
      WHERE id = $attempt_id"
 );
+
+/* ===============================
+   WRITE TO RESULTS TABLE (for teacher view)
+   =============================== */
+$quiz_id_int = (int)$quiz_id;
+$student_id_int = (int)$student_id;
+
+$resCheck = mysqli_query($conn, "SELECT id FROM Results WHERE quiz_id=$quiz_id_int AND student_id=$student_id_int LIMIT 1");
+if (mysqli_num_rows($resCheck) > 0) {
+    // update existing result
+    mysqli_query($conn,
+        "UPDATE Results SET score=$total_score, total_marks=$total_marks, submitted_at='$submitted_at' WHERE quiz_id=$quiz_id_int AND student_id=$student_id_int"
+    );
+} else {
+    // insert new result
+    mysqli_query($conn,
+        "INSERT INTO Results (quiz_id, student_id, score, total_marks, submitted_at)
+         VALUES ($quiz_id_int, $student_id_int, $total_score, $total_marks, '$submitted_at')"
+    );
+}
 
 /* REDIRECT TO RESULT PAGE */
 header("Location: quiz_result.php?attempt_id=$attempt_id");

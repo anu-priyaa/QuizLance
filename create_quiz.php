@@ -5,6 +5,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'teacher') {
     header("Location: login.php");
     exit();
 }
+
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
 if (!$conn) {
     die("Database connection failed");
@@ -13,7 +14,7 @@ if (!$conn) {
 $teacher_id = $_SESSION['user_id'];
 
 /* =========================
-   FETCH TEACHER INFO (SIDEBAR)
+   FETCH TEACHER INFO
    ========================= */
 $res = mysqli_query($conn, "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id");
 $teacher = mysqli_fetch_assoc($res);
@@ -39,21 +40,28 @@ if (isset($_POST['create_quiz'])) {
     $start_time  = $_POST['start_time'];
     $end_time    = $_POST['end_time'];
     $duration    = (int) $_POST['duration'];
+    $pass_marks  = (int) $_POST['pass_marks'];
 
-    if ($title === '' || $class_id === 0 || $start_time === '' || $end_time === '' || $duration <= 0) {
-        $error = "All required fields must be filled";
+    if (
+        $title === '' ||
+        $class_id === 0 ||
+        $start_time === '' ||
+        $end_time === '' ||
+        $duration <= 0 ||
+        $pass_marks < 0
+    ) {
+        $error = "All required fields must be filled correctly";
     } else {
 
         mysqli_query(
             $conn,
-            "INSERT INTO quizzes 
-            (teacher_id, class_id, title, description, start_time, end_time, duration)
-            VALUES 
-            ($teacher_id, $class_id, '$title', '$description', '$start_time', '$end_time', $duration)"
+            "INSERT INTO quizzes
+            (teacher_id, class_id, title, description, start_time, end_time, duration, pass_marks)
+            VALUES
+            ($teacher_id, $class_id, '$title', '$description', '$start_time', '$end_time', $duration, $pass_marks)"
         );
 
         $quiz_id = mysqli_insert_id($conn);
-
         header("Location: add_questions.php?quiz_id=$quiz_id");
         exit();
     }
@@ -81,7 +89,6 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     height:100vh;
 }
 
-/* PROFILE */
 .sidebar-profile {
     text-align:center;
     padding:25px 15px;
@@ -96,12 +103,8 @@ body { display:flex; background:#f0f2f5; min-height:100vh; }
     border:3px solid #5d9415;
 }
 
-.sidebar-profile h3 {
-    margin-top:10px;
-    font-size:16px;
-}
+.sidebar-profile h3 { margin-top:10px; font-size:16px; }
 
-/* MENU */
 .sidebar a {
     padding:15px 25px;
     text-decoration:none;
@@ -168,7 +171,11 @@ textarea { resize:vertical; }
     cursor:pointer;
 }
 
-.alert-error { color:red; font-weight:bold; margin-top:10px; }
+.alert-error {
+    color:red;
+    font-weight:bold;
+    margin-top:10px;
+}
 </style>
 </head>
 
@@ -234,6 +241,11 @@ textarea { resize:vertical; }
             <div class="form-group">
                 <label>Duration (minutes) *</label>
                 <input type="number" name="duration" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Passing Marks *</label>
+                <input type="number" name="pass_marks" min="0" required>
             </div>
 
             <button type="submit" name="create_quiz" class="btn">

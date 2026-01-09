@@ -93,6 +93,26 @@ if (mysqli_num_rows($attemptRes) > 0) {
     $attempt_id = mysqli_insert_id($conn);
 }
 
+// Ensure we have the attempt row with started_at
+$attemptRowRes = mysqli_query($conn, "SELECT * FROM quiz_attempts WHERE id=$attempt_id LIMIT 1");
+if (mysqli_num_rows($attemptRowRes) === 0) {
+    die("Attempt not found");
+}
+$attempt = mysqli_fetch_assoc($attemptRowRes);
+
+// compute expiry based on attempt started_at + quiz duration
+$attemptStart = strtotime($attempt['started_at']);
+$expireTime = $attemptStart + ((int)$quiz['duration'] * 60);
+
+// if attempt already expired on server, finalize and redirect to result view
+if (time() > $expireTime) {
+    if ($attempt['status'] !== 'submitted') {
+        mysqli_query($conn, "UPDATE quiz_attempts SET status='submitted', submitted_at=DATE_ADD(started_at, INTERVAL {$quiz['duration']} MINUTE) WHERE id=$attempt_id");
+    }
+    header("Location: view_score.php?quiz_id=$quiz_id");
+    exit();
+}
+
 /* ===============================
    FETCH QUESTIONS
    =============================== */
@@ -241,7 +261,7 @@ endwhile;
 </form>
 
 <script>
-let remaining = <?= $endTime ?> - Math.floor(Date.now() / 1000);
+let remaining = <?= $expireTime ?> - Math.floor(Date.now() / 1000);
 let timer = document.getElementById("timer");
 
 let interval = setInterval(() => {
