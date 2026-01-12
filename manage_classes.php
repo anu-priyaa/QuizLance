@@ -27,57 +27,108 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* CREATE CLASS */
-if (isset($_POST['create_class'])) {
-    $class_name = trim(mysqli_real_escape_string($conn, $_POST['class_name']));
+/* FETCH CLASSES */
+$class_res = mysqli_query(
+    $conn,
+    "SELECT id, class_name FROM Classes
+     WHERE teacher_id=$teacher_id AND status='active'"
+);
 
-    if ($class_name === '') {
-        $error = "Class name is required";
+/* ADD STUDENT MANUALLY */
+if (isset($_POST['add_student'])) {
+
+    $class_id = (int) $_POST['class_id'];
+    $email    = trim(mysqli_real_escape_string($conn, $_POST['email']));
+
+    if ($email === '') {
+        $error = "Student email is required";
     } else {
-        mysqli_query(
-            $conn,
-            "INSERT INTO Classes (teacher_id, class_name, status)
-             VALUES ($teacher_id, '$class_name', 'active')"
-        );
-        $success = "Class created successfully";
+
+        $stu = mysqli_query($conn, "SELECT id FROM Students WHERE email='$email'");
+
+        if (mysqli_num_rows($stu) === 0) {
+            $error = "Student not found";
+        } else {
+            $student = mysqli_fetch_assoc($stu);
+            $student_id = $student['id'];
+
+            $check = mysqli_query(
+                $conn,
+                "SELECT id FROM class_students
+                 WHERE class_id=$class_id AND student_id=$student_id"
+            );
+
+            if (mysqli_num_rows($check) > 0) {
+                $error = "Student already added to this class";
+            } else {
+                mysqli_query(
+                    $conn,
+                    "INSERT INTO class_students (class_id, student_id)
+                     VALUES ($class_id, $student_id)"
+                );
+                $success = "Student added successfully";
+            }
+        }
     }
 }
 
-/* SOFT DELETE CLASS */
-if (isset($_POST['delete_class'])) {
+/* CSV UPLOAD */
+if (isset($_POST['upload_csv'])) {
+
     $class_id = (int) $_POST['class_id'];
 
-    mysqli_query(
-        $conn,
-        "UPDATE Classes
-         SET status='deleted'
-         WHERE id=$class_id AND teacher_id=$teacher_id"
-    );
+    if ($_FILES['csv_file']['error'] !== 0) {
+        $error = "CSV upload failed";
+    } else {
 
-    $success = "Class deleted successfully";
+        $handle = fopen($_FILES['csv_file']['tmp_name'], "r");
+        $count = 0;
+
+        while (($data = fgetcsv($handle, 1000, ",")) !== false) {
+
+            $email = trim($data[0]);
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+
+            $stu = mysqli_query($conn, "SELECT id FROM Students WHERE email='$email'");
+            if (mysqli_num_rows($stu) === 0) continue;
+
+            $student = mysqli_fetch_assoc($stu);
+            $student_id = $student['id'];
+
+            $check = mysqli_query(
+                $conn,
+                "SELECT id FROM class_students
+                 WHERE class_id=$class_id AND student_id=$student_id"
+            );
+
+            if (mysqli_num_rows($check) === 0) {
+                mysqli_query(
+                    $conn,
+                    "INSERT INTO class_students (class_id, student_id)
+                     VALUES ($class_id, $student_id)"
+                );
+                $count++;
+            }
+        }
+
+        fclose($handle);
+        $success = "$count students added successfully via CSV";
+    }
 }
-
-/* FETCH ACTIVE CLASSES */
-$classes = mysqli_query(
-    $conn,
-    "SELECT * FROM Classes
-     WHERE teacher_id=$teacher_id AND status='active'
-     ORDER BY id DESC"
-);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Classes | QuizLance</title>
+<title>Manage Classes | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body { background:#f0f2f5; }
 
-/* TOP BAR */
+/* ===== TOP BAR ===== */
 .topbar {
     position:fixed;
     top:0;
@@ -93,7 +144,7 @@ body { background:#f0f2f5; }
 }
 .topbar i { font-size:24px; cursor:pointer; }
 
-/* SIDEBAR */
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -123,7 +174,10 @@ body { background:#f0f2f5; }
     object-fit:cover;
     border:3px solid #5d9415;
 }
-.sidebar-profile h3 { margin-top:10px; font-size:16px; }
+.sidebar-profile h3 {
+    margin-top:10px;
+    font-size:16px;
+}
 
 .sidebar a {
     padding:15px 25px;
@@ -132,16 +186,22 @@ body { background:#f0f2f5; }
     display:flex;
     align-items:center;
 }
-.sidebar a i { margin-right:15px; width:20px; }
+.sidebar a i {
+    margin-right:15px;
+    width:20px;
+}
 .sidebar a:hover,
-.sidebar a.active { background:#861434; color:white; }
+.sidebar a.active {
+    background:#861434;
+    color:white;
+}
 
 .logout {
     margin-top:auto;
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* MAIN CONTENT */
+/* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
     padding:90px 40px 40px;
@@ -149,7 +209,7 @@ body { background:#f0f2f5; }
 }
 .main-content.full { margin-left:0; }
 
-/* PAGE CARD */
+/* ===== PAGE CARD ===== */
 .page-card {
     background:white;
     padding:30px;
@@ -159,11 +219,17 @@ body { background:#f0f2f5; }
     max-width:520px;
     margin-bottom:30px;
 }
-.page-card h1 { color:#5A0E24; margin-bottom:10px; }
-.page-card p { margin-bottom:25px; color:#555; }
+.page-card h1 {
+    color:#5A0E24;
+    margin-bottom:10px;
+}
+.page-card p {
+    margin-bottom:25px;
+    color:#555;
+}
 
 /* FORM */
-input {
+select, input {
     width:100%;
     padding:12px;
     border-radius:6px;
@@ -184,32 +250,10 @@ button:hover {
     transform:translateY(-2px);
 }
 
-/* CLASS LIST */
-.class-list {
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
-    gap:20px;
-}
-.class-card {
-    background:white;
-    padding:22px;
-    border-radius:12px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.08);
-    border-left:5px solid #5d9415;
-}
-.class-card h3 { color:#5A0E24; margin-bottom:6px; }
-.class-card small { color:#777; }
-
-.delete-btn {
-    margin-top:12px;
-    background:#b30000;
-}
-.delete-btn:hover { background:#8a0000; }
-
 .alert-success { color:green; font-weight:bold; }
 .alert-error { color:red; font-weight:bold; }
 
-/* PROFILE POPUP */
+/* ===== PROFILE POPUP ===== */
 .profile-popup {
     display:none;
     position:fixed;
@@ -231,12 +275,8 @@ button:hover {
     height:200px;
     border-radius:50%;
     border:4px solid #5d9415;
-
-    object-fit: cover;      /* 🔥 MOST IMPORTANT */
-    object-position: center;
-    display: block;
+    object-fit:cover;
 }
-
 .close-btn {
     position:absolute;
     top:10px;
@@ -256,14 +296,17 @@ button:hover {
 
 <!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
+
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="my_classes.php" class="active"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
+    <a href="manage_classes.php" class="active">
+        <i class="fas fa-users"></i> Manage Class
+    </a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
     <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 
@@ -276,39 +319,48 @@ button:hover {
 <div class="main-content full" id="mainContent">
 
     <div class="page-card">
-        <h1>Create Class</h1>
-        <p>Create a new class. Students will be added by you.</p>
+        <h1>Add Student Manually</h1>
+        <p>Add an existing student to a class using email.</p>
 
         <form method="POST">
-            <input type="text" name="class_name" placeholder="Enter class name" required>
-            <button name="create_class">Create Class</button>
+            <select name="class_id" required>
+                <option value="">-- Select Class --</option>
+                <?php while ($c = mysqli_fetch_assoc($class_res)): ?>
+                    <option value="<?= $c['id'] ?>">
+                        <?= htmlspecialchars($c['class_name']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+
+            <input type="email" name="email" placeholder="Student email" required>
+            <button name="add_student">Add Student</button>
         </form>
-
-        <?php if (isset($success)) echo "<p class='alert-success'>$success</p>"; ?>
-        <?php if (isset($error)) echo "<p class='alert-error'>$error</p>"; ?>
     </div>
 
-    <h2 style="color:#5A0E24;margin-bottom:15px;">My Classes</h2>
+    <div class="page-card">
+        <h1>Upload Students via CSV</h1>
+        <p>Bulk add students to a class using CSV file.</p>
 
-    <div class="class-list">
-        <?php while ($row = mysqli_fetch_assoc($classes)): ?>
-            <div class="class-card">
-                <h3><?= htmlspecialchars($row['class_name']) ?></h3>
-                <small>
-                    Created by you on
-                    <?= date("d M Y, h:i A", strtotime($row['created_at'])) ?>
-                </small>
+        <form method="POST" enctype="multipart/form-data">
+            <select name="class_id" required>
+                <option value="">-- Select Class --</option>
+                <?php
+                mysqli_data_seek($class_res, 0);
+                while ($c = mysqli_fetch_assoc($class_res)):
+                ?>
+                    <option value="<?= $c['id'] ?>">
+                        <?= htmlspecialchars($c['class_name']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
 
-                <form method="POST"
-                      onsubmit="return confirm('Do you really want to delete this class?');">
-                    <input type="hidden" name="class_id" value="<?= $row['id'] ?>">
-                    <button class="delete-btn" name="delete_class">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </form>
-            </div>
-        <?php endwhile; ?>
+            <input type="file" name="csv_file" accept=".csv" required>
+            <button name="upload_csv">Upload CSV</button>
+        </form>
     </div>
+
+    <?php if (isset($success)) echo "<p class='alert-success'>$success</p>"; ?>
+    <?php if (isset($error)) echo "<p class='alert-error'>$error</p>"; ?>
 
 </div>
 

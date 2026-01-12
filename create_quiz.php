@@ -16,17 +16,22 @@ $teacher_id = $_SESSION['user_id'];
 /* =========================
    FETCH TEACHER INFO
    ========================= */
-$res = mysqli_query($conn, "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id");
+$res = mysqli_query($conn,
+    "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id"
+);
 $teacher = mysqli_fetch_assoc($res);
 
+$teacher_name = $teacher['name'];
+$profile_pic  = $teacher['profile_pic'];
+$imgSrc = $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85';
+
 /* =========================
-   FETCH CLASSES
+   FETCH CLASSES (NO class_code)
    ========================= */
-$classes = mysqli_query(
-    $conn,
-    "SELECT id, class_name, class_code 
-     FROM Classes 
-     WHERE teacher_id=$teacher_id"
+$classes = mysqli_query($conn,
+    "SELECT id, class_name
+     FROM Classes
+     WHERE teacher_id=$teacher_id AND status='active'"
 );
 
 /* =========================
@@ -53,12 +58,11 @@ if (isset($_POST['create_quiz'])) {
         $error = "All required fields must be filled correctly";
     } else {
 
-        mysqli_query(
-            $conn,
+        mysqli_query($conn,
             "INSERT INTO quizzes
-            (teacher_id, class_id, title, description, start_time, end_time, duration, pass_marks)
+            (teacher_id, class_id, title, description, start_time, end_time, duration, pass_marks, status)
             VALUES
-            ($teacher_id, $class_id, '$title', '$description', '$start_time', '$end_time', $duration, $pass_marks)"
+            ($teacher_id, $class_id, '$title', '$description', '$start_time', '$end_time', $duration, $pass_marks, 'draft')"
         );
 
         $quiz_id = mysqli_insert_id($conn);
@@ -75,123 +79,107 @@ if (isset($_POST['create_quiz'])) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-body { display:flex; background:#f0f2f5; min-height:100vh; }
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+body{background:#f0f2f5}
 
-/* ===== SIDEBAR ===== */
-.sidebar {
-    width:260px;
-    background:#5A0E24;
-    color:white;
-    display:flex;
-    flex-direction:column;
-    position:fixed;
-    height:100vh;
+/* TOP BAR */
+.topbar{
+    position:fixed;top:0;left:0;
+    width:100%;height:60px;
+    background:#5A0E24;color:white;
+    display:flex;align-items:center;
+    padding:0 20px;z-index:1001
 }
+.topbar i{font-size:24px;cursor:pointer}
 
-.sidebar-profile {
-    text-align:center;
-    padding:25px 15px;
-    border-bottom:1px solid rgba(255,255,255,0.15);
+/* SIDEBAR */
+.sidebar{
+    width:260px;background:#5A0E24;color:white;
+    display:flex;flex-direction:column;
+    position:fixed;top:60px;left:0;
+    height:calc(100vh - 60px);
+    transition:.3s ease;z-index:1000
 }
-
-.sidebar-profile img {
-    width:85px;
-    height:85px;
-    border-radius:50%;
-    object-fit:cover;
-    border:3px solid #5d9415;
+.sidebar.collapsed{transform:translateX(-100%)}
+.sidebar-profile{
+    text-align:center;padding:25px 15px;
+    border-bottom:1px solid rgba(255,255,255,.15)
 }
-
-.sidebar-profile h3 { margin-top:10px; font-size:16px; }
-
-.sidebar a {
-    padding:15px 25px;
-    text-decoration:none;
-    color:#d1d1d1;
-    display:flex;
-    align-items:center;
+.sidebar-profile img{
+    width:85px;height:85px;border-radius:50%;
+    border:3px solid #5d9415;object-fit:cover
 }
+.sidebar-profile h3{margin-top:10px;font-size:16px}
 
-.sidebar a i { margin-right:15px; width:20px; }
-
-.sidebar a:hover,
-.sidebar a.active {
-    background:#861434;
-    color:white;
+.sidebar a{
+    padding:15px 25px;text-decoration:none;
+    color:#d1d1d1;display:flex;align-items:center
 }
-
-.logout {
+.sidebar a i{margin-right:15px;width:20px}
+.sidebar a:hover,.sidebar a.active{
+    background:#861434;color:white
+}
+.logout{
     margin-top:auto;
-    border-top:1px solid rgba(255,255,255,0.15);
+    border-top:1px solid rgba(255,255,255,.15)
 }
 
-/* ===== MAIN CONTENT ===== */
-.main-content {
+/* MAIN CONTENT */
+.main-content{
     margin-left:260px;
-    flex:1;
-    padding:40px;
+    padding:90px 40px 40px
 }
 
-.card {
+/* CARD */
+.card{
     background:white;
     padding:30px;
     border-radius:15px;
     max-width:600px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.05);
-    border-left:5px solid #5d9415;
+    box-shadow:0 4px 12px rgba(0,0,0,.05);
+    border-left:5px solid #5d9415
+}
+.card h2{color:#5A0E24;margin-bottom:20px}
+
+.form-group{margin-bottom:15px}
+.form-group label{font-weight:bold;display:block;margin-bottom:6px}
+input,textarea,select{
+    width:100%;padding:10px;
+    border-radius:5px;border:1px solid #ccc
+}
+textarea{resize:vertical}
+
+.btn{
+    background:#5d9415;color:white;
+    padding:10px 18px;border:none;
+    border-radius:6px;font-weight:bold;
+    cursor:pointer
 }
 
-.card h2 {
-    color:#5A0E24;
-    margin-bottom:20px;
-}
-
-.form-group { margin-bottom:15px; }
-.form-group label { display:block; font-weight:bold; margin-bottom:6px; }
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-    width:100%;
-    padding:10px;
-    border-radius:5px;
-    border:1px solid #ccc;
-}
-
-textarea { resize:vertical; }
-
-.btn {
-    background:#5d9415;
-    color:white;
-    padding:10px 18px;
-    border:none;
-    border-radius:6px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-.alert-error {
-    color:red;
-    font-weight:bold;
-    margin-top:10px;
-}
+.alert-error{color:red;font-weight:bold;margin-top:10px}
 </style>
 </head>
 
 <body>
 
+<!-- TOP BAR -->
+<div class="topbar">
+    <i class="fas fa-bars"></i>
+</div>
+
 <!-- SIDEBAR -->
 <div class="sidebar">
 
     <div class="sidebar-profile">
-        <img src="<?= $teacher['profile_pic'] ?: 'https://via.placeholder.com/85' ?>">
-        <h3><?= htmlspecialchars($teacher['name']) ?></h3>
+        <img src="<?= $imgSrc ?>">
+        <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
     <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="profile.php"><i class="fas fa-user-edit"></i> Profile</a>
+    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
+    <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 
     <div class="logout">
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -201,61 +189,61 @@ textarea { resize:vertical; }
 <!-- MAIN CONTENT -->
 <div class="main-content">
 
-    <div class="card">
-        <h2>Create New Quiz</h2>
+<div class="card">
+<h2>Create New Quiz</h2>
 
-        <form method="POST">
+<form method="POST">
 
-            <div class="form-group">
-                <label>Quiz Title *</label>
-                <input type="text" name="title" required>
-            </div>
-
-            <div class="form-group">
-                <label>Description (optional)</label>
-                <textarea name="description" rows="3"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Select Class *</label>
-                <select name="class_id" required>
-                    <option value="">-- Select Class --</option>
-                    <?php while ($c = mysqli_fetch_assoc($classes)): ?>
-                        <option value="<?= $c['id'] ?>">
-                            <?= htmlspecialchars($c['class_name']) ?> (<?= $c['class_code'] ?>)
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Start Time *</label>
-                <input type="datetime-local" name="start_time" required>
-            </div>
-
-            <div class="form-group">
-                <label>End Time *</label>
-                <input type="datetime-local" name="end_time" required>
-            </div>
-
-            <div class="form-group">
-                <label>Duration (minutes) *</label>
-                <input type="number" name="duration" min="1" required>
-            </div>
-
-            <div class="form-group">
-                <label>Passing Marks *</label>
-                <input type="number" name="pass_marks" min="0" required>
-            </div>
-
-            <button type="submit" name="create_quiz" class="btn">
-                Create Quiz & Add Questions →
-            </button>
-        </form>
-
-        <?php if (isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
+    <div class="form-group">
+        <label>Quiz Title *</label>
+        <input type="text" name="title" required>
     </div>
 
+    <div class="form-group">
+        <label>Description (optional)</label>
+        <textarea name="description" rows="3"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>Select Class *</label>
+        <select name="class_id" required>
+            <option value="">-- Select Class --</option>
+            <?php while ($c = mysqli_fetch_assoc($classes)): ?>
+                <option value="<?= $c['id'] ?>">
+                    <?= htmlspecialchars($c['class_name']) ?>
+                </option>
+            <?php endwhile; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Start Time *</label>
+        <input type="datetime-local" name="start_time" required>
+    </div>
+
+    <div class="form-group">
+        <label>End Time *</label>
+        <input type="datetime-local" name="end_time" required>
+    </div>
+
+    <div class="form-group">
+        <label>Duration (minutes) *</label>
+        <input type="number" name="duration" min="1" required>
+    </div>
+
+    <div class="form-group">
+        <label>Passing Marks *</label>
+        <input type="number" name="pass_marks" min="0" required>
+    </div>
+
+    <button type="submit" name="create_quiz" class="btn">
+        Create Quiz & Add Questions →
+    </button>
+</form>
+
+<?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
+
+</div>
 </div>
 
 </body>

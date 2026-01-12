@@ -24,10 +24,10 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH JOINED CLASSES */
+/* FETCH ASSIGNED CLASSES (NO CLASS CODE) */
 $classes = mysqli_query(
     $conn,
-    "SELECT c.class_name, c.class_code, t.name AS teacher_name
+    "SELECT c.class_name, t.name AS teacher_name
      FROM class_students cs
      JOIN Classes c ON cs.class_id = c.id
      JOIN Teachers t ON c.teacher_id = t.id
@@ -46,7 +46,7 @@ $classes = mysqli_query(
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body { background:#f0f2f5; }
 
-/* ===== TOP BAR ===== */
+/* TOP BAR */
 .topbar {
     position:fixed;
     top:0;
@@ -66,7 +66,7 @@ body { background:#f0f2f5; }
     cursor:pointer;
 }
 
-/* ===== SIDEBAR ===== */
+/* SIDEBAR */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -78,7 +78,6 @@ body { background:#f0f2f5; }
     left:0;
     height:calc(100vh - 60px);
     transition:0.3s ease;
-    z-index:1000;
 }
 
 .sidebar.collapsed {
@@ -106,10 +105,8 @@ body { background:#f0f2f5; }
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
-    font-weight:bold;
 }
 
-/* MENU */
 .sidebar a {
     padding:15px 25px;
     text-decoration:none;
@@ -134,7 +131,7 @@ body { background:#f0f2f5; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* ===== MAIN CONTENT ===== */
+/* MAIN CONTENT */
 .main-content {
     margin-left:260px;
     padding:90px 40px 40px;
@@ -145,13 +142,12 @@ body { background:#f0f2f5; }
     margin-left:0;
 }
 
-/* ===== PAGE TITLE ===== */
 .page-title {
     color:#5A0E24;
     margin-bottom:25px;
 }
 
-/* ===== CLASS GRID ===== */
+/* CLASS GRID */
 .class-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
@@ -169,6 +165,10 @@ body { background:#f0f2f5; }
 .class-card h3 {
     color:#5A0E24;
     margin-bottom:10px;
+}
+
+.class-card p {
+    margin-bottom:6px;
 }
 </style>
 </head>
@@ -189,7 +189,6 @@ body { background:#f0f2f5; }
     </div>
 
     <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="join_class.php"><i class="fas fa-users"></i> Join Class</a>
     <a href="my_classes_student.php" class="active"><i class="fas fa-chalkboard"></i> My Classes</a>
     <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
@@ -210,12 +209,12 @@ body { background:#f0f2f5; }
             <?php while ($row = mysqli_fetch_assoc($classes)): ?>
                 <div class="class-card">
                     <h3><?= htmlspecialchars($row['class_name']) ?></h3>
-                    <p><b>Class Code:</b> <?= htmlspecialchars($row['class_code']) ?></p>
                     <p><b>Teacher:</b> <?= htmlspecialchars($row['teacher_name']) ?></p>
+                    <p style="color:#5d9415;font-weight:bold;">Assigned by teacher</p>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <p>You have not joined any classes yet.</p>
+            <p>You are not assigned to any classes yet.</p>
         <?php endif; ?>
     </div>
 
@@ -226,7 +225,6 @@ const menuToggle  = document.getElementById('menuToggle');
 const sidebar     = document.getElementById('sidebar');
 const mainContent = document.getElementById('mainContent');
 
-/* restore sidebar state without animation */
 window.addEventListener('DOMContentLoaded', () => {
     const state = sessionStorage.getItem('sidebar');
 
@@ -238,7 +236,6 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => sidebar.classList.remove('no-transition'), 50);
 });
 
-/* toggle sidebar only on click */
 menuToggle.onclick = () => {
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('full');

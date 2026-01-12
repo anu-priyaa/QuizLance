@@ -56,11 +56,7 @@ body { background:#f0f2f5; }
     padding:0 20px;
     z-index:1001;
 }
-
-.topbar i {
-    font-size:24px;
-    cursor:pointer;
-}
+.topbar i { font-size:24px; cursor:pointer; }
 
 /* ===== SIDEBAR ===== */
 .sidebar {
@@ -76,15 +72,8 @@ body { background:#f0f2f5; }
     transition:0.3s ease;
     z-index:1000;
 }
-
-.sidebar.collapsed {
-    transform:translateX(-100%);
-}
-
-/* prevent animation on page load */
-.sidebar.no-transition {
-    transition:none !important;
-}
+.sidebar.collapsed { transform:translateX(-100%); }
+.sidebar.no-transition { transition:none !important; }
 
 .sidebar-profile {
     text-align:center;
@@ -92,7 +81,6 @@ body { background:#f0f2f5; }
     border-bottom:1px solid rgba(255,255,255,0.15);
     cursor:pointer;
 }
-
 .sidebar-profile img {
     width:85px;
     height:85px;
@@ -100,7 +88,6 @@ body { background:#f0f2f5; }
     object-fit:cover;
     border:3px solid #5d9415;
 }
-
 .sidebar-profile h3 {
     margin-top:10px;
     font-size:16px;
@@ -113,12 +100,10 @@ body { background:#f0f2f5; }
     display:flex;
     align-items:center;
 }
-
 .sidebar a i {
     margin-right:15px;
     width:20px;
 }
-
 .sidebar a:hover,
 .sidebar a.active {
     background:#861434;
@@ -130,18 +115,15 @@ body { background:#f0f2f5; }
     border-top:1px solid rgba(255,255,255,0.15);
 }
 
-/* ===== MAIN CONTENT (SAME AS DASHBOARD) ===== */
+/* ===== MAIN CONTENT ===== */
 .main-content {
     margin-left:260px;
     padding:90px 40px 40px;
     transition:0.3s ease;
 }
+.main-content.full { margin-left:0; }
 
-.main-content.full {
-    margin-left:0;
-}
-
-/* ===== PAGE CARD (MATCH WELCOME CARD STYLE) ===== */
+/* ===== PAGE CARD ===== */
 .page-card {
     background:white;
     padding:30px;
@@ -150,12 +132,10 @@ body { background:#f0f2f5; }
     border-left:5px solid #5d9415;
     max-width:520px;
 }
-
 .page-card h1 {
     color:#5A0E24;
     margin-bottom:10px;
 }
-
 .page-card p {
     margin-bottom:25px;
     color:#555;
@@ -169,7 +149,6 @@ select {
     border:1px solid #ccc;
     margin-bottom:20px;
 }
-
 button {
     background:#5d9415;
     color:white;
@@ -179,10 +158,45 @@ button {
     font-weight:bold;
     cursor:pointer;
 }
-
 button:hover {
     background:#4e7d12;
     transform:translateY(-2px);
+}
+
+/* ===== PROFILE POPUP ===== */
+.profile-popup {
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    z-index:2000;
+    justify-content:center;
+    align-items:center;
+}
+.profile-popup-content {
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    text-align:center;
+    position:relative;
+}
+.profile-popup-content img {
+    width:200px;
+    height:200px;
+    border-radius:50%;
+    border:4px solid #5d9415;
+
+    object-fit: cover;      /* 🔥 MOST IMPORTANT */
+    object-position: center;
+    display: block;
+}
+
+.close-btn {
+    position:absolute;
+    top:10px;
+    right:14px;
+    font-size:22px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -197,13 +211,14 @@ button:hover {
 <!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
 
-    <div class="sidebar-profile">
+    <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
+    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
     <a href="view_attendance_teacher.php" class="active">
         <i class="fas fa-clipboard-list"></i> Attendance
     </a>
@@ -238,12 +253,21 @@ button:hover {
 
 </div>
 
+<!-- PROFILE POPUP -->
+<div id="profilePopup" class="profile-popup">
+    <div class="profile-popup-content">
+        <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
+        <img src="<?= $imgSrc ?>">
+        <h2><?= htmlspecialchars($teacher_name) ?></h2>
+    </div>
+</div>
+
 <script>
 const menuToggle  = document.getElementById('menuToggle');
 const sidebar     = document.getElementById('sidebar');
 const mainContent = document.getElementById('mainContent');
 
-/* restore sidebar state without animation */
+/* restore sidebar state */
 window.addEventListener('DOMContentLoaded', () => {
     const state = sessionStorage.getItem('sidebar');
     if (state === 'open') {
@@ -253,7 +277,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => sidebar.classList.remove('no-transition'), 50);
 });
 
-/* toggle sidebar only on click */
+/* toggle sidebar */
 menuToggle.onclick = () => {
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('full');
@@ -263,6 +287,14 @@ menuToggle.onclick = () => {
         sidebar.classList.contains('collapsed') ? 'closed' : 'open'
     );
 };
+
+/* PROFILE POPUP */
+function openProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'flex';
+}
+function closeProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'none';
+}
 </script>
 
 </body>

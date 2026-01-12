@@ -198,7 +198,12 @@ body { background:#f0f2f5; }
     height:200px;
     border-radius:50%;
     border:4px solid #5d9415;
+
+    object-fit: cover;      /* 🔥 MOST IMPORTANT */
+    object-position: center;
+    display: block;
 }
+
 
 .close-btn {
     position:absolute;
@@ -234,6 +239,7 @@ body { background:#f0f2f5; }
 
     <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
+    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
     <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Profile</a>
 

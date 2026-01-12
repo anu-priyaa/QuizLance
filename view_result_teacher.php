@@ -201,6 +201,7 @@ th {
     <a href="my_classes.php">
         <i class="fas fa-users"></i> My Classes
     </a>
+    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
     <a href="view_attendance_teacher.php">
         <i class="fas fa-clipboard-list"></i> Attendance
     </a>
