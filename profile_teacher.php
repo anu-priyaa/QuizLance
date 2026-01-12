@@ -97,6 +97,57 @@ body { background:#f0f2f5; }
     z-index:1001;
 }
 
+/* ===== TOP PROFILE MENU ===== */
+.top-profile {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    position: relative;
+}
+
+.top-profile img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #5d9415;
+}
+
+.top-profile span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* DROPDOWN */
+.profile-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 55px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    min-width: 180px;
+    overflow: hidden;
+    z-index: 3000;
+}
+
+.profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+}
+
+.profile-dropdown a:hover {
+    background: #f2f2f2;
+}
+
 .topbar i {
     font-size:24px;
     cursor:pointer;
@@ -259,12 +310,29 @@ body { background:#f0f2f5; }
 <!-- TOP BAR -->
 <div class="topbar">
     <i class="fas fa-bars" id="menuToggle"></i>
+
+    <!-- PROFILE ICON (TOP RIGHT) -->
+    <div class="top-profile" onclick="toggleProfileMenu()">
+        <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/36' ?>">
+        <span><?= htmlspecialchars($teacher_name) ?></span>
+
+        <div class="profile-dropdown" id="profileDropdown">
+            <a href="profile_teacher.php">
+                <i class="fas fa-user-edit"></i> Edit Profile
+            </a>
+            <a href="logout.php">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
 </div>
+
 
 <!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
 
-    <div class="sidebar-profile" onclick="openProfilePopup()">
+    <div class="sidebar-profile">
+
         <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85' ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
@@ -272,12 +340,8 @@ body { background:#f0f2f5; }
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
-    <a href="profile_teacher.php" class="active"><i class="fas fa-user-edit"></i> Profile</a>
-
-    <div class="logout">
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    </div>
 </div>
 
 <!-- MAIN CONTENT -->
@@ -305,6 +369,8 @@ body { background:#f0f2f5; }
             </div>
 
             <button class="btn" name="update_profile">Update Profile</button>
+           <a href="change_password.php" class="btn">Change Password</a>
+            
         </form>
 
         <?php if (isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
@@ -352,6 +418,22 @@ function closeProfilePopup() {
     document.getElementById('profilePopup').style.display = 'none';
 }
 </script>
+
+<script>
+function toggleProfileMenu() {
+    const menu = document.getElementById('profileDropdown');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+/* Close dropdown when clicking outside */
+document.addEventListener('click', function (e) {
+    const profile = document.querySelector('.top-profile');
+    if (profile && !profile.contains(e.target)) {
+        document.getElementById('profileDropdown').style.display = 'none';
+    }
+});
+</script>
+
 
 </body>
 </html>

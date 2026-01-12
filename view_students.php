@@ -13,7 +13,9 @@ if (!$conn) {
 
 $teacher_id = $_SESSION['user_id'];
 
-/* FETCH TEACHER INFO */
+/* =========================
+   FETCH TEACHER INFO
+   ========================= */
 $res = mysqli_query(
     $conn,
     "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id"
@@ -27,92 +29,46 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH CLASSES */
-$class_res = mysqli_query(
+/* =========================
+   FETCH TEACHER CLASSES
+   ========================= */
+$classes = mysqli_query(
     $conn,
-    "SELECT id, class_name FROM Classes
-     WHERE teacher_id=$teacher_id AND status='active'"
+    "SELECT id, class_name, created_at
+     FROM Classes
+     WHERE teacher_id=$teacher_id AND status='active'
+     ORDER BY created_at DESC"
 );
 
-/* ADD STUDENT MANUALLY */
-if (isset($_POST['add_student'])) {
+/* =========================
+   FETCH STUDENTS IF CLASS SELECTED
+   ========================= */
+$students = null;
+$selected_class = null;
 
-    $class_id = (int) $_POST['class_id'];
-    $email    = trim(mysqli_real_escape_string($conn, $_POST['email']));
+if (isset($_GET['class_id'])) {
 
-    if ($email === '') {
-        $error = "Student email is required";
-    } else {
+    $class_id = (int) $_GET['class_id'];
 
-        $stu = mysqli_query($conn, "SELECT id FROM Students WHERE email='$email'");
+    /* verify ownership */
+    $check = mysqli_query(
+        $conn,
+        "SELECT class_name FROM Classes
+         WHERE id=$class_id AND teacher_id=$teacher_id AND status='active'"
+    );
 
-        if (mysqli_num_rows($stu) === 0) {
-            $error = "Student not found";
-        } else {
-            $student = mysqli_fetch_assoc($stu);
-            $student_id = $student['id'];
+    if (mysqli_num_rows($check) > 0) {
 
-            $check = mysqli_query(
-                $conn,
-                "SELECT id FROM class_students
-                 WHERE class_id=$class_id AND student_id=$student_id"
-            );
+        $selected_class = mysqli_fetch_assoc($check);
 
-            if (mysqli_num_rows($check) > 0) {
-                $error = "Student already added to this class";
-            } else {
-                mysqli_query(
-                    $conn,
-                    "INSERT INTO class_students (class_id, student_id)
-                     VALUES ($class_id, $student_id)"
-                );
-                $success = "Student added successfully";
-            }
-        }
-    }
-}
-
-/* CSV UPLOAD */
-if (isset($_POST['upload_csv'])) {
-
-    $class_id = (int) $_POST['class_id'];
-
-    if ($_FILES['csv_file']['error'] !== 0) {
-        $error = "CSV upload failed";
-    } else {
-
-        $handle = fopen($_FILES['csv_file']['tmp_name'], "r");
-        $count = 0;
-
-        while (($data = fgetcsv($handle, 1000, ",")) !== false) {
-
-            $email = trim($data[0]);
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
-
-            $stu = mysqli_query($conn, "SELECT id FROM Students WHERE email='$email'");
-            if (mysqli_num_rows($stu) === 0) continue;
-
-            $student = mysqli_fetch_assoc($stu);
-            $student_id = $student['id'];
-
-            $check = mysqli_query(
-                $conn,
-                "SELECT id FROM class_students
-                 WHERE class_id=$class_id AND student_id=$student_id"
-            );
-
-            if (mysqli_num_rows($check) === 0) {
-                mysqli_query(
-                    $conn,
-                    "INSERT INTO class_students (class_id, student_id)
-                     VALUES ($class_id, $student_id)"
-                );
-                $count++;
-            }
-        }
-
-        fclose($handle);
-        $success = "$count students added successfully via CSV";
+        $students = mysqli_query(
+            $conn,
+            "SELECT s.name, s.email
+             FROM class_students cs
+             JOIN Students s ON cs.student_id = s.id
+             WHERE cs.class_id = $class_id
+             ORDER BY s.name"
+        );
     }
 }
 ?>
@@ -121,7 +77,7 @@ if (isset($_POST['upload_csv'])) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manage Classes | QuizLance</title>
+<title>View Students | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
@@ -226,10 +182,7 @@ body { background:#f0f2f5; }
     object-fit:cover;
     border:3px solid #5d9415;
 }
-.sidebar-profile h3 {
-    margin-top:10px;
-    font-size:16px;
-}
+.sidebar-profile h3 { margin-top:10px; font-size:16px; }
 
 .sidebar a {
     padding:15px 25px;
@@ -238,15 +191,9 @@ body { background:#f0f2f5; }
     display:flex;
     align-items:center;
 }
-.sidebar a i {
-    margin-right:15px;
-    width:20px;
-}
+.sidebar a i { margin-right:15px; width:20px; }
 .sidebar a:hover,
-.sidebar a.active {
-    background:#861434;
-    color:white;
-}
+.sidebar a.active { background:#861434; color:white; }
 
 .logout {
     margin-top:auto;
@@ -261,57 +208,69 @@ body { background:#f0f2f5; }
 }
 .main-content.full { margin-left:0; }
 
-/* ===== PAGE CARD ===== */
+/* ===== CARDS ===== */
 .page-card {
     background:white;
     padding:30px;
     border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
-    max-width:520px;
     margin-bottom:30px;
 }
 
-/* ===== PAGE GRID ===== */
-.page-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 30px;
-}
-
-.page-card h1 {
+.page-card h2 {
     color:#5A0E24;
-    margin-bottom:10px;
-}
-.page-card p {
-    margin-bottom:25px;
-    color:#555;
+    margin-bottom:15px;
 }
 
-/* FORM */
-select, input {
-    width:100%;
-    padding:12px;
-    border-radius:6px;
-    border:1px solid #ccc;
-    margin-bottom:20px;
+/* ===== CLASS LIST ===== */
+.class-list {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
+    gap:20px;
 }
-button {
+
+.class-card {
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+    border-left:5px solid #5d9415;
+}
+
+.class-card h3 {
+    color:#5A0E24;
+    margin-bottom:6px;
+}
+
+.class-card small { color:#777; }
+
+.view-btn {
+    margin-top:12px;
     background:#5d9415;
     color:white;
-    padding:12px 18px;
+    padding:8px 14px;
     border:none;
     border-radius:6px;
-    font-weight:bold;
     cursor:pointer;
 }
-button:hover {
-    background:#4e7d12;
-    transform:translateY(-2px);
+
+/* ===== STUDENT TABLE ===== */
+table {
+    width:100%;
+    border-collapse:collapse;
 }
 
-.alert-success { color:green; font-weight:bold; }
-.alert-error { color:red; font-weight:bold; }
+th, td {
+    padding:12px;
+    border-bottom:1px solid #ddd;
+    text-align:left;
+}
+
+th {
+    background:#5A0E24;
+    color:white;
+}
 
 /* PROFILE POPUP */
 .profile-popup {
@@ -340,12 +299,13 @@ button:hover {
     object-position: center;
     display: block;
 }
+
 .close-btn {
-    position:absolute;
-    top:10px;
-    right:14px;
-    font-size:22px;
-    cursor:pointer;
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 22px;
+    cursor: pointer;
 }
 </style>
 </head>
@@ -382,64 +342,64 @@ button:hover {
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
 
-    <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    
+    
+<a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php" class="active"><i class="fas fa-users"></i> Manage Class</a>
-    <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
+    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="view_students.php" class="active"><i class="fas fa-eye"></i> View Students</a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
 </div>
 
 <!-- MAIN CONTENT -->
 <div class="main-content full" id="mainContent">
 
-    <div class="page-grid">
-
     <div class="page-card">
-        <h1>Add Student Manually</h1>
-        <p>Add an existing student to a class using email.</p>
+        <h2>Your Classes</h2>
 
-        <form method="POST">
-            <select name="class_id" required>
-                <option value="">-- Select Class --</option>
-                <?php while ($c = mysqli_fetch_assoc($class_res)): ?>
-                    <option value="<?= $c['id'] ?>">
-                        <?= htmlspecialchars($c['class_name']) ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
+        <div class="class-list">
+            <?php while ($c = mysqli_fetch_assoc($classes)): ?>
+                <div class="class-card">
+                    <h3><?= htmlspecialchars($c['class_name']) ?></h3>
+                    <small>
+                        Created on <?= date("d M Y, h:i A", strtotime($c['created_at'])) ?>
+                    </small>
 
-            <input type="email" name="email" placeholder="Student email" required>
-            <button name="add_student">Add Student</button>
-        </form>
+                    <a href="view_students.php?class_id=<?= $c['id'] ?>">
+                        <button class="view-btn">
+                            <i class="fas fa-users"></i> View Students
+                        </button>
+                    </a>
+                </div>
+            <?php endwhile; ?>
+        </div>
     </div>
 
-    <div class="page-card">
-        <h1>Upload Students via CSV</h1>
-        <p>Bulk add students to a class using CSV file.</p>
+    <?php if ($students !== null): ?>
+        <div class="page-card">
+            <h2>Students in <?= htmlspecialchars($selected_class['class_name']) ?></h2>
 
-        <form method="POST" enctype="multipart/form-data">
-            <select name="class_id" required>
-                <option value="">-- Select Class --</option>
-                <?php
-                mysqli_data_seek($class_res, 0);
-                while ($c = mysqli_fetch_assoc($class_res)):
-                ?>
-                    <option value="<?= $c['id'] ?>">
-                        <?= htmlspecialchars($c['class_name']) ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
+            <?php if (mysqli_num_rows($students) === 0): ?>
+                <p>No students enrolled in this class.</p>
+            <?php else: ?>
+                <table>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                    </tr>
 
-            <input type="file" name="csv_file" accept=".csv" required>
-            <button name="upload_csv">Upload CSV</button>
-        </form>
-    </div>
-
-</div>
-
-
-    <?php if (isset($success)) echo "<p class='alert-success'>$success</p>"; ?>
-    <?php if (isset($error)) echo "<p class='alert-error'>$error</p>"; ?>
+                    <?php $i=1; while ($s = mysqli_fetch_assoc($students)): ?>
+                        <tr>
+                            <td><?= $i++ ?></td>
+                            <td><?= htmlspecialchars($s['name']) ?></td>
+                            <td><?= htmlspecialchars($s['email']) ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </table>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
 </div>
 
@@ -477,14 +437,6 @@ menuToggle.onclick = () => {
         sidebar.classList.contains('collapsed') ? 'closed' : 'open'
     );
 };
-
-/* PROFILE POPUP */
-function openProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'flex';
-}
-function closeProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'none';
-}
 </script>
 
 <script>
@@ -500,6 +452,17 @@ document.addEventListener('click', function (e) {
         document.getElementById('profileDropdown').style.display = 'none';
     }
 });
+</script>
+
+<script>
+/* PROFILE POPUP */
+function openProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'flex';
+}
+
+function closeProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'none';
+}
 </script>
 
 </body>
