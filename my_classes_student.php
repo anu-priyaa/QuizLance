@@ -24,7 +24,7 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH ASSIGNED CLASSES (NO CLASS CODE) */
+/* FETCH ASSIGNED CLASSES */
 $classes = mysqli_query(
     $conn,
     "SELECT c.class_name, t.name AS teacher_name
@@ -46,7 +46,7 @@ $classes = mysqli_query(
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body { background:#f0f2f5; }
 
-/* TOP BAR */
+/* ===== TOP BAR ===== */
 .topbar {
     position:fixed;
     top:0;
@@ -60,13 +60,51 @@ body { background:#f0f2f5; }
     padding:0 20px;
     z-index:1001;
 }
+.topbar i { font-size:24px; cursor:pointer; }
 
-.topbar i {
-    font-size:24px;
+/* ===== TOP PROFILE ===== */
+.top-profile {
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
     cursor:pointer;
+    position:relative;
 }
+.top-profile img {
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid #5d9415;
+}
+.top-profile span { font-size:14px; font-weight:500; }
 
-/* SIDEBAR */
+/* DROPDOWN */
+.profile-dropdown {
+    display:none;
+    position:absolute;
+    right:0;
+    top:55px;
+    background:white;
+    border-radius:8px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.15);
+    min-width:180px;
+    overflow:hidden;
+    z-index:3000;
+}
+.profile-dropdown a {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 15px;
+    text-decoration:none;
+    color:#333;
+    font-size:14px;
+}
+.profile-dropdown a:hover { background:#f2f2f2; }
+
+/* ===== SIDEBAR ===== */
 .sidebar {
     width:260px;
     background:#5A0E24;
@@ -78,22 +116,17 @@ body { background:#f0f2f5; }
     left:0;
     height:calc(100vh - 60px);
     transition:0.3s ease;
+    z-index:1000;
 }
-
-.sidebar.collapsed {
-    transform:translateX(-100%);
-}
-
-.sidebar.no-transition {
-    transition:none !important;
-}
+.sidebar.collapsed { transform:translateX(-100%); }
+.sidebar.no-transition { transition:none !important; }
 
 .sidebar-profile {
     text-align:center;
     padding:25px 15px;
     border-bottom:1px solid rgba(255,255,255,0.15);
+    cursor:pointer;
 }
-
 .sidebar-profile img {
     width:85px;
     height:85px;
@@ -101,11 +134,7 @@ body { background:#f0f2f5; }
     object-fit:cover;
     border:3px solid #5d9415;
 }
-
-.sidebar-profile h3 {
-    margin-top:10px;
-    font-size:16px;
-}
+.sidebar-profile h3 { margin-top:10px; font-size:16px; }
 
 .sidebar a {
     padding:15px 25px;
@@ -114,33 +143,20 @@ body { background:#f0f2f5; }
     display:flex;
     align-items:center;
 }
-
-.sidebar a i {
-    margin-right:15px;
-    width:20px;
-}
-
+.sidebar a i { margin-right:15px; width:20px; }
 .sidebar a:hover,
 .sidebar a.active {
     background:#861434;
     color:white;
 }
 
-.logout {
-    margin-top:auto;
-    border-top:1px solid rgba(255,255,255,0.15);
-}
-
-/* MAIN CONTENT */
+/* ===== MAIN ===== */
 .main-content {
     margin-left:260px;
     padding:90px 40px 40px;
     transition:0.3s ease;
 }
-
-.main-content.full {
-    margin-left:0;
-}
+.main-content.full { margin-left:0; }
 
 .page-title {
     color:#5A0E24;
@@ -153,7 +169,6 @@ body { background:#f0f2f5; }
     grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
     gap:20px;
 }
-
 .class-card {
     background:white;
     padding:25px;
@@ -161,14 +176,38 @@ body { background:#f0f2f5; }
     box-shadow:0 4px 10px rgba(0,0,0,0.1);
     border-left:5px solid #5d9415;
 }
+.class-card h3 { color:#5A0E24; margin-bottom:10px; }
 
-.class-card h3 {
-    color:#5A0E24;
-    margin-bottom:10px;
+/* PROFILE POPUP */
+.profile-popup {
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    z-index:2000;
+    justify-content:center;
+    align-items:center;
 }
-
-.class-card p {
-    margin-bottom:6px;
+.profile-popup-content {
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    text-align:center;
+    position:relative;
+}
+.profile-popup-content img {
+    width:200px;
+    height:200px;
+    border-radius:50%;
+    border:4px solid #5d9415;
+    object-fit:cover;
+}
+.close-btn {
+    position:absolute;
+    top:10px;
+    right:14px;
+    font-size:22px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -178,12 +217,25 @@ body { background:#f0f2f5; }
 <!-- TOP BAR -->
 <div class="topbar">
     <i class="fas fa-bars" id="menuToggle"></i>
+
+    <div class="top-profile" onclick="toggleProfileMenu()">
+        <img src="<?= $imgSrc ?>">
+        <span><?= htmlspecialchars($student_name) ?></span>
+
+        <div class="profile-dropdown" id="profileDropdown">
+            <a href="profile_student.php">
+                <i class="fas fa-user-edit"></i> Edit Profile
+            </a>
+            <a href="logout.php">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
 </div>
 
 <!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
-
-    <div class="sidebar-profile">
+    <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
@@ -192,16 +244,10 @@ body { background:#f0f2f5; }
     <a href="my_classes_student.php" class="active"><i class="fas fa-chalkboard"></i> My Classes</a>
     <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
-    <a href="profile_student.php"><i class="fas fa-user-edit"></i> Profile</a>
-
-    <div class="logout">
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    </div>
 </div>
 
-<!-- MAIN CONTENT -->
+<!-- MAIN -->
 <div class="main-content full" id="mainContent">
-
     <h2 class="page-title">My Classes</h2>
 
     <div class="class-grid">
@@ -210,14 +256,21 @@ body { background:#f0f2f5; }
                 <div class="class-card">
                     <h3><?= htmlspecialchars($row['class_name']) ?></h3>
                     <p><b>Teacher:</b> <?= htmlspecialchars($row['teacher_name']) ?></p>
-                    <p style="color:#5d9415;font-weight:bold;">Assigned by teacher</p>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
             <p>You are not assigned to any classes yet.</p>
         <?php endif; ?>
     </div>
+</div>
 
+<!-- PROFILE POPUP -->
+<div id="profilePopup" class="profile-popup">
+    <div class="profile-popup-content">
+        <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
+        <img src="<?= $imgSrc ?>">
+        <h2><?= htmlspecialchars($student_name) ?></h2>
+    </div>
 </div>
 
 <script>
@@ -225,26 +278,47 @@ const menuToggle  = document.getElementById('menuToggle');
 const sidebar     = document.getElementById('sidebar');
 const mainContent = document.getElementById('mainContent');
 
+/* restore sidebar */
 window.addEventListener('DOMContentLoaded', () => {
     const state = sessionStorage.getItem('sidebar');
-
     if (state === 'open') {
         sidebar.classList.remove('collapsed');
         mainContent.classList.remove('full');
     }
-
     setTimeout(() => sidebar.classList.remove('no-transition'), 50);
 });
 
+/* toggle sidebar */
 menuToggle.onclick = () => {
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('full');
-
     sessionStorage.setItem(
         'sidebar',
         sidebar.classList.contains('collapsed') ? 'closed' : 'open'
     );
 };
+
+/* dropdown */
+function toggleProfileMenu() {
+    const menu = document.getElementById('profileDropdown');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+/* close dropdown */
+document.addEventListener('click', function(e) {
+    const profile = document.querySelector('.top-profile');
+    if (profile && !profile.contains(e.target)) {
+        document.getElementById('profileDropdown').style.display = 'none';
+    }
+});
+
+/* profile popup */
+function openProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'flex';
+}
+function closeProfilePopup() {
+    document.getElementById('profilePopup').style.display = 'none';
+}
 </script>
 
 </body>

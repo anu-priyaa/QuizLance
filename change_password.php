@@ -65,23 +65,47 @@ if (isset($_POST['change_password'])) {
     elseif (!password_verify($old_password, $user['password'])) {
         $error = "Old password is incorrect";
     }
-    elseif (strlen($new_password) < 6) {
-        $error = "Password must be at least 6 characters";
-    }
     elseif ($new_password !== $confirm_pass) {
-        $error = "Passwords do not match";
+        $error = "New password and confirm password do not match";
     }
     else {
-        $hashed = password_hash($new_password, PASSWORD_DEFAULT);
 
-        mysqli_query(
-            $conn,
-            "UPDATE $table SET password='$hashed' WHERE id=$user_id"
-        );
+        /* =========================
+           STRONG PASSWORD VALIDATION
+           ========================= */
+        $pwErrors = [];
 
-        session_destroy();
-        header("Location: $redirect?password_changed=1");
-        exit();
+        if (strlen($new_password) < 8) {
+            $pwErrors[] = "at least 8 characters";
+        }
+        if (!preg_match('/[A-Z]/', $new_password)) {
+            $pwErrors[] = "one uppercase letter";
+        }
+        if (!preg_match('/[a-z]/', $new_password)) {
+            $pwErrors[] = "one lowercase letter";
+        }
+        if (!preg_match('/[0-9]/', $new_password)) {
+            $pwErrors[] = "one number";
+        }
+        if (!preg_match('/[!@#$%^&*()_+\-=[\]{};:\"\\|,.<>\/?]/', $new_password)) {
+            $pwErrors[] = "one special character";
+        }
+
+        if (!empty($pwErrors)) {
+            $error = "Password must contain " . implode(", ", $pwErrors);
+        }
+        else {
+            $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+
+            mysqli_query(
+                $conn,
+                "UPDATE $table SET password='$hashed' WHERE id=$user_id"
+            );
+
+            session_destroy();
+            header("Location: $redirect?password_changed=1");
+            exit();
+        }
     }
 }
 ?>
@@ -161,7 +185,7 @@ button:hover {
     <h2>Change Password</h2>
 
     <?php if (isset($error)): ?>
-        <div class="error"><?= $error ?></div>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="POST">
