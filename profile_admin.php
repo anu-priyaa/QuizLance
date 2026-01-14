@@ -15,54 +15,85 @@ if (!$conn) {
 
 $admin_id = $_SESSION['user_id'];
 
-/* FETCH ADMIN INFO (FOR IMAGE FALLBACK) */
-$adminRes = mysqli_query(
+/* FETCH ADMIN INFO */
+$res = mysqli_query(
     $conn,
-    "SELECT name, profile_pic FROM Admins WHERE id=$admin_id"
+    "SELECT name, username, profile_pic FROM Admins WHERE id = $admin_id"
 );
-$admin = mysqli_fetch_assoc($adminRes);
+$admin = mysqli_fetch_assoc($res);
 
-$admin_name = $_SESSION['user_name'] ?? $admin['name'] ?? 'Admin';
+$admin_name  = $admin['name'];
+$profile_pic = $admin['profile_pic'];
 
-/* ✅ GLOBAL IMAGE SOURCE (FIXED) */
+/* UPDATE PROFILE */
+if (isset($_POST['update_profile'])) {
+
+    $name     = trim(mysqli_real_escape_string($conn, $_POST['name']));
+    $username = trim(mysqli_real_escape_string($conn, $_POST['username']));
+    $picPath  = $profile_pic;
+
+    /* IMAGE UPLOAD */
+    if (!empty($_FILES['profile_pic']['name'])) {
+
+        $ext = strtolower(pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png'];
+
+        if (!in_array($ext, $allowed)) {
+            $error = "Only JPG, JPEG, PNG files allowed";
+        } else {
+
+            if (!is_dir("uploads/admins")) {
+                mkdir("uploads/admins", 0777, true);
+            }
+
+            $newName = "admin_" . $admin_id . "_" . time() . "." . $ext;
+            $uploadPath = "uploads/admins/" . $newName;
+
+            if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadPath)) {
+                $picPath = $uploadPath;
+            } else {
+                $error = "Image upload failed";
+            }
+        }
+    }
+
+    /* UPDATE DATABASE */
+    if (!isset($error)) {
+
+        mysqli_query(
+            $conn,
+            "UPDATE Admins 
+             SET name='$name', username='$username', profile_pic='$picPath'
+             WHERE id=$admin_id"
+        );
+
+        /* UPDATE SESSION (CRITICAL) */
+        $_SESSION['user_name'] = $name;
+        $_SESSION['admin_profile_pic'] = $picPath;
+
+        /* SUCCESS MESSAGE */
+        $_SESSION['message'] = [
+            'type' => 'success',
+            'text' => 'Profile updated successfully'
+        ];
+
+        header("Location: profile_admin.php");
+        exit();
+    }
+}
+
+/* FINAL IMAGE SOURCE (AFTER UPDATE) */
 $imgSrc = !empty($_SESSION['admin_profile_pic'])
     ? htmlspecialchars($_SESSION['admin_profile_pic']) . '?t=' . time()
-    : (!empty($admin['profile_pic'])
-        ? htmlspecialchars($admin['profile_pic']) . '?t=' . time()
+    : ($profile_pic
+        ? htmlspecialchars($profile_pic) . '?t=' . time()
         : 'https://via.placeholder.com/85');
-
-/* CURRENT VIEW */
-$view = $_GET['view'] ?? 'all';
-
-/* ACTIVATE / DEACTIVATE */
-if (isset($_GET['disable'])) {
-    mysqli_query($conn,"UPDATE Students SET status='inactive' WHERE id=".(int)$_GET['disable']);
-    header("Location: manage_students.php"); exit();
-}
-if (isset($_GET['activate'])) {
-    mysqli_query($conn,"UPDATE Students SET status='active' WHERE id=".(int)$_GET['activate']);
-    header("Location: manage_students.php"); exit();
-}
-
-/* COUNTS */
-$total_students   = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) c FROM Students"))['c'];
-$active_students  = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) c FROM Students WHERE status='active'"))['c'];
-$inactive_students= mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) c FROM Students WHERE status='inactive'"))['c'];
-
-/* FETCH STUDENTS */
-$where="";
-if($view==='active')   $where="WHERE status='active'";
-if($view==='inactive') $where="WHERE status='inactive'";
-$students=mysqli_query($conn,"
-    SELECT id,name,username,admission_id,email,status
-    FROM Students $where ORDER BY id DESC
-");
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Manage Students | QuizLance</title>
+<title>My Profile | QuizLance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
@@ -125,7 +156,6 @@ body{background:#f0f2f5;}
 }
 .sidebar a i{margin-right:15px;width:20px;}
 .sidebar a:hover,.sidebar a.active{background:#861434;color:white;}
-.logout{margin-top:auto;border-top:1px solid rgba(255,255,255,.15);}
 
 /* MAIN */
 .main-content{
@@ -134,32 +164,30 @@ body{background:#f0f2f5;}
 }
 .main-content.full{margin-left:0;}
 
-/* CARDS */
-.dashboard-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:20px;margin-bottom:30px;
+.card{
+    background:white;padding:30px;border-radius:15px;
+    max-width:600px;border-left:5px solid #5d9415;
 }
-.menu-card{
-    background:white;padding:24px;height:170px;
-    border-radius:12px;text-align:center;
-    box-shadow:0 2px 10px rgba(0,0,0,.05);
-    display:flex;flex-direction:column;
-    justify-content:center;align-items:center;
-    text-decoration:none;color:#333;
+.profile-pic-large{
+    width:120px;height:120px;border-radius:50%;
+    object-fit:cover;border:4px solid #5d9415;
+    margin-bottom:15px;
 }
-.menu-card i{font-size:38px;color:#5A0E24;margin-bottom:10px;}
-.menu-card p{font-size:26px;font-weight:bold;color:#5d9415;}
-
-/* TABLE */
-table{
-    width:100%;background:white;
-    border-collapse:collapse;border-radius:10px;overflow:hidden;
+.form-group{margin-bottom:15px;}
+.form-group label{font-weight:bold;}
+.form-group input{
+    width:100%;padding:10px;border-radius:6px;border:1px solid #ccc;
 }
-th,td{padding:15px;border-bottom:1px solid #ddd;}
-th{background:#5A0E24;color:white;}
-.active{color:green;font-weight:bold;}
-.inactive{color:red;font-weight:bold;}
+.btn{
+    background:#5d9415;color:white;padding:10px 18px;
+    border:none;border-radius:6px;font-weight:bold;cursor:pointer;
+}
+.alert-error{color:red;font-weight:bold;margin-top:10px;}
+.alert-success{
+    background:#d4edda;color:#155724;
+    padding:12px 18px;border-radius:8px;
+    margin-bottom:15px;font-weight:bold;
+}
 </style>
 </head>
 
@@ -185,40 +213,43 @@ th{background:#5A0E24;color:white;}
         <h3><?= htmlspecialchars($admin_name) ?></h3>
     </div>
 
-    <a href="admin_dashboard.php"><i class="fas fa-chart-pie"></i> Overview</a>
+    <a href="admin_dashboard.php"><i class="fas fa-chart-pie"></i> Dashboard</a>
     <a href="manage_teachers.php"><i class="fas fa-chalkboard-teacher"></i> Manage Teachers</a>
-    <a href="manage_students.php" class="active"><i class="fas fa-user-graduate"></i> Manage Students</a>
-
-    <div class="logout">
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    </div>
+    <a href="manage_students.php"><i class="fas fa-user-graduate"></i> Manage Students</a>
 </div>
 
 <div class="main-content full" id="mainContent">
 
-<div class="dashboard-grid">
-    <a href="?view=all" class="menu-card"><i class="fas fa-users"></i><h3>All Students</h3><p><?= $total_students ?></p></a>
-    <a href="?view=active" class="menu-card"><i class="fas fa-user-check"></i><h3>Active Students</h3><p><?= $active_students ?></p></a>
-    <a href="?view=inactive" class="menu-card"><i class="fas fa-user-times"></i><h3>Inactive Students</h3><p><?= $inactive_students ?></p></a>
-</div>
+<?php if(isset($_SESSION['message'])): ?>
+    <div class="alert-success"><?= $_SESSION['message']['text'] ?></div>
+<?php unset($_SESSION['message']); endif; ?>
 
-<table>
-<tr><th>Name</th><th>Username</th><th>Admission ID</th><th>Email</th><th>Status</th><th>Action</th></tr>
-<?php while($s=mysqli_fetch_assoc($students)): ?>
-<tr>
-<td><?= htmlspecialchars($s['name']) ?></td>
-<td><?= htmlspecialchars($s['username']) ?></td>
-<td><?= htmlspecialchars($s['admission_id']) ?></td>
-<td><?= htmlspecialchars($s['email']) ?></td>
-<td class="<?= $s['status'] ?>"><?= ucfirst($s['status']) ?></td>
-<td>
-<?= $s['status']==='active'
-    ? "<a href='?disable={$s['id']}'>Deactivate</a>"
-    : "<a href='?activate={$s['id']}'>Activate</a>" ?>
-</td>
-</tr>
-<?php endwhile; ?>
-</table>
+<div class="card">
+    <h2>My Profile</h2>
+
+    <img src="<?= $imgSrc ?>" class="profile-pic-large">
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Profile Picture</label>
+            <input type="file" name="profile_pic">
+        </div>
+
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" value="<?= htmlspecialchars($admin['name']) ?>" required>
+        </div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" value="<?= htmlspecialchars($admin['username']) ?>" required>
+        </div>
+
+        <button class="btn" name="update_profile">Update Profile</button>
+    </form>
+
+    <?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
+</div>
 
 </div>
 
@@ -238,7 +269,9 @@ window.addEventListener('DOMContentLoaded',()=>{
 menuToggle.onclick=()=>{
     sidebar.classList.toggle('collapsed');
     main.classList.toggle('full');
-    sessionStorage.setItem('sidebar',sidebar.classList.contains('collapsed')?'closed':'open');
+    sessionStorage.setItem('sidebar',
+        sidebar.classList.contains('collapsed')?'closed':'open'
+    );
 };
 
 function toggleProfileMenu(){
