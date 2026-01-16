@@ -212,6 +212,17 @@ th{background:#5A0E24;color:white;}
             </tr>
 
             <?php while ($q = mysqli_fetch_assoc($quizzes)):
+            $attemptRes = mysqli_query(
+    $conn,
+    "SELECT id, status 
+     FROM quiz_attempts 
+     WHERE quiz_id={$q['id']} 
+     AND student_id=$student_id
+     LIMIT 1"
+);
+
+$attempt = mysqli_fetch_assoc($attemptRes);
+
                 $start = strtotime($q['start_time']);
                 $end   = strtotime($q['end_time']);
             ?>
@@ -221,14 +232,40 @@ th{background:#5A0E24;color:white;}
                 <td><?= date("d M Y, h:i A", $start) ?></td>
                 <td><?= date("d M Y, h:i A", $end) ?></td>
                 <td>
-                    <?php if ($now >= $start && $now <= $end): ?>
-                        <a href="attempt_quiz.php?quiz_id=<?= $q['id'] ?>" class="btn btn-live">Attempt</a>
-                    <?php elseif ($now < $start): ?>
-                        <span class="btn btn-upcoming">Upcoming</span>
-                    <?php else: ?>
-                        <span class="btn btn-expired">Expired</span>
-                    <?php endif; ?>
-                </td>
+<?php
+/* CASE 1: Student already attempted */
+if ($attempt) {
+
+    if ($attempt['status'] === 'submitted') {
+        // ✅ Quiz completed → View Score
+        echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" class="btn btn-live">
+                View Score
+              </a>';
+    } else {
+        // 🕒 Started but not submitted
+        echo '<a href="attempt_quiz.php?quiz_id='.$q['id'].'" class="btn btn-live">
+                Continue
+              </a>';
+    }
+
+}
+/* CASE 2: Not attempted yet */
+else {
+
+    if ($now >= $start && $now <= $end) {
+        echo '<a href="attempt_quiz.php?quiz_id='.$q['id'].'" class="btn btn-live">
+                Attempt
+              </a>';
+    } elseif ($now < $start) {
+        echo '<span class="btn btn-upcoming">Upcoming</span>';
+    } else {
+        echo '<span class="btn btn-expired">Expired</span>';
+    }
+
+}
+?>
+</td>
+
             </tr>
             <?php endwhile; ?>
         </table>

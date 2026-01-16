@@ -344,7 +344,8 @@ body {
     </div>
 
     <div class="dashboard-grid">
-        <a href="create_quiz.php" class="menu-link">
+        <a href="quiz_rules.php" class="menu-link">
+
             <div class="menu-card">
                 <i class="fas fa-plus-square"></i>
                 <h3>Create Quiz</h3>
@@ -437,6 +438,8 @@ document.addEventListener('click', function (e) {
     }
 });
 </script>
+
+<?php include 'includes/auto_logout.php'; ?>
 
 </body>
 </html>

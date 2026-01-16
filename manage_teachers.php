@@ -218,5 +218,7 @@ document.addEventListener('click',e=>{
 setTimeout(()=>document.querySelector('.alert')?.remove(),3000);
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

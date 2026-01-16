@@ -31,6 +31,67 @@ if (mysqli_num_rows($qres) === 0) {
 
 $quiz = mysqli_fetch_assoc($qres);
 
+// SHOW RULES ONLY ON FIRST LOAD
+if (!isset($_POST['start_quiz'])) {
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title><?= htmlspecialchars($quiz['title']) ?> - Rules</title>
+
+<style>
+body {
+    font-family:'Segoe UI', sans-serif;
+    background:#f0f2f5;
+    padding:40px;
+}
+.card {
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    max-width:700px;
+    margin:auto;
+    box-shadow:0 4px 12px rgba(0,0,0,0.05);
+}
+.btn {
+    background:#5d9415;
+    color:white;
+    padding:12px 20px;
+    border:none;
+    border-radius:6px;
+    font-weight:bold;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2><?= htmlspecialchars($quiz['title']) ?> – Quiz Rules</h2>
+
+    <?php if (!empty($quiz['rules'])): ?>
+        <p><?= nl2br(htmlspecialchars($quiz['rules'])) ?></p>
+    <?php else: ?>
+        <p>Submit before 12:25pm</p>
+    <?php endif; ?>
+
+    <form method="POST">
+        <input type="hidden" name="quiz_id" value="<?= $quiz_id ?>">
+        <button class="btn" name="start_quiz">Start Quiz</button>
+    </form>
+</div>
+
+</body>
+</html>
+<?php
+exit();
+}
+
+$shuffle_questions = $quiz['shuffle_questions'] ?? 'no';
+
+
 /* ===============================
    TIME VALIDATION (FIXED)
    =============================== */
@@ -114,12 +175,25 @@ if (time() > $expireTime) {
 }
 
 /* ===============================
-   FETCH QUESTIONS
+   FETCH QUESTIONS (WITH SHUFFLE LOGIC)
    =============================== */
-$questions = mysqli_query(
-    $conn,
-    "SELECT * FROM questions WHERE quiz_id=$quiz_id"
-);
+if ($shuffle_questions === 'yes') {
+    $questions = mysqli_query(
+        $conn,
+        "SELECT * FROM questions 
+         WHERE quiz_id=$quiz_id 
+         ORDER BY RAND()"
+    );
+} else {
+    $questions = mysqli_query(
+        $conn,
+        "SELECT * FROM questions 
+         WHERE quiz_id=$quiz_id 
+         ORDER BY id"
+    );
+}
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -275,6 +349,65 @@ let interval = setInterval(() => {
     }
     remaining--;
 }, 1000);
+</script>
+
+<script>
+let violationCount = 0;
+const MAX_VIOLATIONS = 3;
+
+document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+        violationCount++;
+        updateViolationBox(); // 🔹 ADD THIS LINE
+
+        alert(
+            "⚠ Warning!\n" +
+            "Tab switching is not allowed.\n" +
+            "Violation: " + violationCount + " / " + MAX_VIOLATIONS
+        );
+
+        if (violationCount >= MAX_VIOLATIONS) {
+            alert("Quiz auto-submitted due to multiple violations.");
+            document.forms[0].submit();
+        }
+    }
+});
+</script>
+
+
+<script>
+// Disable right-click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// Disable copy, paste, cut
+document.addEventListener("copy", e => e.preventDefault());
+document.addEventListener("paste", e => e.preventDefault());
+document.addEventListener("cut", e => e.preventDefault());
+
+// Disable keyboard shortcuts
+document.addEventListener("keydown", function (e) {
+    if (
+        (e.ctrlKey && ['c','v','x','a','u'].includes(e.key.toLowerCase())) ||
+        e.key === "PrintScreen"
+    ) {
+        e.preventDefault();
+    }
+});
+
+// Disable text selection
+document.addEventListener("selectstart", e => e.preventDefault());
+</script>
+
+<div id="violationBox" style="position:fixed;bottom:10px;right:10px;
+background:#5A0E24;color:white;padding:6px 10px;border-radius:5px;font-size:12px;">
+Violations: 0 / 3
+</div>
+
+<script>
+function updateViolationBox() {
+    document.getElementById("violationBox").innerText =
+        "Violations: " + violationCount + " / " + MAX_VIOLATIONS;
+}
 </script>
 
 </body>

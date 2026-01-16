@@ -155,7 +155,7 @@ body { background:#f0f2f5; padding:40px; }
         <?php endif; ?>
     </div>
 
-    <a href="student_dashboard.php" class="btn">
+    <a href="scheduled_quizzes_student.php" class="btn">
         ← Back to Dashboard
     </a>
 

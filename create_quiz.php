@@ -1,11 +1,26 @@
 <?php
 session_start();
 
+/* =========================
+   ROLE PROTECTION
+   ========================= */
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'teacher') {
     header("Location: login.php");
     exit();
 }
 
+/* =========================
+   RULES PROTECTION
+   ========================= */
+$quiz_rules = $_SESSION['quiz_rules'] ?? null;
+if (!$quiz_rules) {
+    header("Location: quiz_rules.php");
+    exit();
+}
+
+/* =========================
+   DATABASE CONNECTION
+   ========================= */
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
 if (!$conn) {
     die("Database connection failed");
@@ -16,19 +31,19 @@ $teacher_id = $_SESSION['user_id'];
 /* =========================
    FETCH TEACHER INFO
    ========================= */
-$res = mysqli_query($conn,
-    "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id"
-);
+$res = mysqli_query($conn, "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id");
 $teacher = mysqli_fetch_assoc($res);
 
 $teacher_name = $teacher['name'];
-$profile_pic  = $teacher['profile_pic'];
-$imgSrc = $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/85';
+$imgSrc = $teacher['profile_pic']
+    ? $teacher['profile_pic'] . '?t=' . time()
+    : 'https://via.placeholder.com/85';
 
 /* =========================
-   FETCH CLASSES (NO class_code)
+   FETCH CLASSES
    ========================= */
-$classes = mysqli_query($conn,
+$classes = mysqli_query(
+    $conn,
     "SELECT id, class_name
      FROM Classes
      WHERE teacher_id=$teacher_id AND status='active'"
@@ -47,30 +62,56 @@ if (isset($_POST['create_quiz'])) {
     $duration    = (int) $_POST['duration'];
     $pass_marks  = (int) $_POST['pass_marks'];
 
+    // SIMPLE MARKING LOGIC
+    $marks_per_question = ($_POST['marks_per_question'] !== '')
+        ? (float) $_POST['marks_per_question']
+        : 1;
+
+    $negative_marks = ($_POST['negative_marks'] !== '')
+        ? (float) $_POST['negative_marks']
+        : 0;
+
+    /* VALIDATION */
     if (
         $title === '' ||
         $class_id === 0 ||
         $start_time === '' ||
         $end_time === '' ||
         $duration <= 0 ||
-        $pass_marks < 0
+        $pass_marks < 0 ||
+        $marks_per_question <= 0 ||
+        $negative_marks < 0
     ) {
         $error = "All required fields must be filled correctly";
     } else {
 
-        mysqli_query($conn,
+        $rules_text = mysqli_real_escape_string($conn, $quiz_rules);
+
+        mysqli_query(
+            $conn,
             "INSERT INTO quizzes
-            (teacher_id, class_id, title, description, start_time, end_time, duration, pass_marks, status)
+            (teacher_id, class_id, title, description,
+             start_time, end_time, duration, pass_marks,
+             marks_per_question, negative_marks,
+             status, quiz_rules)
             VALUES
-            ($teacher_id, $class_id, '$title', '$description', '$start_time', '$end_time', $duration, $pass_marks, 'draft')"
+            ($teacher_id, $class_id, '$title', '$description',
+             '$start_time', '$end_time', $duration, $pass_marks,
+             $marks_per_question, $negative_marks,
+             'draft', '$rules_text')"
         );
 
+        unset($_SESSION['quiz_rules']);
         $quiz_id = mysqli_insert_id($conn);
         header("Location: add_questions.php?quiz_id=$quiz_id");
         exit();
     }
 }
 ?>
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -231,6 +272,17 @@ textarea{resize:vertical}
         <label>Passing Marks *</label>
         <input type="number" name="pass_marks" min="0" required>
     </div>
+
+    <div class="form-group">
+    <label>Marks per Question (optional)</label>
+    <input type="number" step="0.25" name="marks_per_question" placeholder="Default: 1">
+</div>
+
+<div class="form-group">
+    <label>Negative Marks for Wrong Answer (optional)</label>
+    <input type="number" step="0.25" name="negative_marks" placeholder="Default: 0">
+</div>
+
 
     <button type="submit" name="create_quiz" class="btn">
         Create Quiz & Add Questions →

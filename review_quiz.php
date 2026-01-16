@@ -36,6 +36,8 @@ if (!$quiz) {
    ========================= */
 if (isset($_POST['publish_quiz'])) {
 
+    $shuffle = isset($_POST['shuffle_questions']) ? 'yes' : 'no';
+
     $checkQ = mysqli_query($conn,
         "SELECT id FROM questions WHERE quiz_id = $quiz_id"
     );
@@ -44,11 +46,15 @@ if (isset($_POST['publish_quiz'])) {
         $error = "Add at least one question before publishing";
     } else {
         mysqli_query($conn,
-            "UPDATE quizzes SET status='scheduled' WHERE id=$quiz_id"
+            "UPDATE quizzes 
+             SET status='scheduled',
+                 shuffle_questions='$shuffle'
+             WHERE id=$quiz_id"
         );
         $success = "Quiz published successfully!";
     }
 }
+
 
 /* =========================
    FETCH QUESTIONS
@@ -234,6 +240,13 @@ h2, h3 { color:#5A0E24; }
         <a href="add_questions.php?quiz_id=<?= $quiz_id ?>" class="btn btn-add">
             ➕ Add More Questions
         </a>
+
+        <label style="display:block; margin:15px 0; font-weight:bold;">
+    <input type="checkbox" name="shuffle_questions" value="yes"
+        <?= ($quiz['shuffle_questions'] === 'yes') ? 'checked' : '' ?>>
+    Shuffle questions for students
+</label>
+
 
         <?php if ($quiz['status'] === 'draft'): ?>
             <button name="publish_quiz" class="btn btn-publish">
