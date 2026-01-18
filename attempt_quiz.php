@@ -71,11 +71,12 @@ body {
 <div class="card">
     <h2><?= htmlspecialchars($quiz['title']) ?> – Quiz Rules</h2>
 
-    <?php if (!empty($quiz['rules'])): ?>
-        <p><?= nl2br(htmlspecialchars($quiz['rules'])) ?></p>
-    <?php else: ?>
-        <p>Submit before 12:25pm</p>
-    <?php endif; ?>
+    <?php if (!empty($quiz['quiz_rules'])): ?>
+    <p><?= nl2br(htmlspecialchars($quiz['quiz_rules'])) ?></p>
+<?php else: ?>
+    <p>No rules provided for this quiz.</p>
+<?php endif; ?>
+
 
     <form method="POST">
         <input type="hidden" name="quiz_id" value="<?= $quiz_id ?>">
@@ -273,6 +274,15 @@ while ($q = mysqli_fetch_assoc($questions)):
 <div class="question">
     <h4><?= $qno ?>. <?= htmlspecialchars($q['question_text']) ?></h4>
 
+    <?php if ($q['question_type'] === 'descriptive'): ?>
+    <textarea
+        name="answer[<?= $q['id'] ?>]"
+        rows="5"
+        style="width:100%;padding:10px;margin-top:10px"
+        placeholder="Write your answer here..."></textarea>
+<?php endif; ?>
+
+
     <?php if (!empty($q['media_path'])): ?>
         <?php if ($q['question_type'] === 'image'): ?>
             <img src="<?= $q['media_path'] ?>" style="max-width:300px;"><br><br>
@@ -287,40 +297,54 @@ while ($q = mysqli_fetch_assoc($questions)):
         <?php endif; ?>
     <?php endif; ?>
 
-    <!-- MCQ -->
-    <?php if ($q['question_type'] === 'mcq'): ?>
-        <?php
-        $opts = mysqli_query(
-            $conn,
-            "SELECT * FROM question_options WHERE question_id={$q['id']}"
-        );
-        while ($o = mysqli_fetch_assoc($opts)):
-        ?>
-            <label>
-                <input type="radio"
-                       name="answer[<?= $q['id'] ?>]"
-                       value="<?= htmlspecialchars($o['option_text']) ?>">
-                <?= htmlspecialchars($o['option_text']) ?>
-            </label><br>
-        <?php endwhile; ?>
+<!-- MCQ -->
+<?php if ($q['question_type'] === 'mcq'): ?>
 
-    <!-- TRUE / FALSE -->
-    <?php elseif ($q['question_type'] === 'true_false'): ?>
+    <?php
+    $opts = mysqli_query(
+        $conn,
+        "SELECT * FROM question_options WHERE question_id={$q['id']}"
+    );
+    while ($o = mysqli_fetch_assoc($opts)):
+    ?>
         <label>
-            <input type="radio" name="answer[<?= $q['id'] ?>]" value="True"> True
+            <input type="radio"
+                   name="answer[<?= $q['id'] ?>]"
+                   value="<?= htmlspecialchars($o['option_text']) ?>">
+            <?= htmlspecialchars($o['option_text']) ?>
         </label><br>
-        <label>
-            <input type="radio" name="answer[<?= $q['id'] ?>]" value="False"> False
-        </label>
+    <?php endwhile; ?>
 
-    <!-- ONE WORD / FILL BLANK -->
-    <?php elseif ($q['question_type'] === 'one_word' || $q['question_type'] === 'fill_blank'): ?>
-        <input type="text"
-               name="answer[<?= $q['id'] ?>]"
-               placeholder="Your answer"
-               style="width:300px;padding:8px;">
+<!-- TRUE / FALSE -->
+<?php elseif ($q['question_type'] === 'true_false'): ?>
 
-    <?php endif; ?>
+    <label>
+        <input type="radio" name="answer[<?= $q['id'] ?>]" value="True"> True
+    </label><br>
+    <label>
+        <input type="radio" name="answer[<?= $q['id'] ?>]" value="False"> False
+    </label>
+
+<!-- ONE WORD / FILL BLANK -->
+<?php elseif ($q['question_type'] === 'one_word' || $q['question_type'] === 'fill_blank'): ?>
+
+    <input type="text"
+           name="answer[<?= $q['id'] ?>]"
+           placeholder="Your answer"
+           style="width:300px;padding:8px;">
+
+<!-- DESCRIPTIVE (ONLY ADDITION) -->
+<?php elseif ($q['question_type'] === 'descriptive'): ?>
+
+    <textarea
+        name="answer[<?= $q['id'] ?>]"
+        rows="5"
+        style="width:100%;padding:10px"
+        placeholder="Write your answer here..."></textarea>
+
+<?php endif; ?>
+
+
 </div>
 
 
@@ -353,7 +377,7 @@ let interval = setInterval(() => {
 
 <script>
 let violationCount = 0;
-const MAX_VIOLATIONS = 3;
+const MAX_VIOLATIONS = 2;
 
 document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
@@ -408,6 +432,46 @@ function updateViolationBox() {
     document.getElementById("violationBox").innerText =
         "Violations: " + violationCount + " / " + MAX_VIOLATIONS;
 }
+</script>
+
+<script>
+// Disable right-click
+document.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+});
+
+// Disable copy, paste, cut
+document.addEventListener("copy", function (e) {
+    e.preventDefault();
+});
+document.addEventListener("paste", function (e) {
+    e.preventDefault();
+});
+document.addEventListener("cut", function (e) {
+    e.preventDefault();
+});
+
+// Disable text selection
+document.addEventListener("selectstart", function (e) {
+    e.preventDefault();
+});
+
+// Disable common keyboard shortcuts
+document.addEventListener("keydown", function (e) {
+
+    // Ctrl + C, V, X, A, U
+    if (
+        e.ctrlKey &&
+        ['c','v','x','a','u'].includes(e.key.toLowerCase())
+    ) {
+        e.preventDefault();
+    }
+
+    // Disable Print Screen
+    if (e.key === "PrintScreen") {
+        e.preventDefault();
+    }
+});
 </script>
 
 </body>

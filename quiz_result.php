@@ -1,31 +1,48 @@
 <?php
 session_start();
 
+/* =========================
+   ROLE PROTECTION
+   ========================= */
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     header("Location: login.php");
     exit();
 }
 
+/* =========================
+   DATABASE CONNECTION
+   ========================= */
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
 if (!$conn) {
     die("Database connection failed");
 }
 
-$student_id = $_SESSION['user_id'];
+$student_id = (int) $_SESSION['user_id'];
 
+/* =========================
+   VALIDATE ACCESS
+   ========================= */
 if (!isset($_GET['attempt_id'])) {
     die("Invalid access");
 }
 
-$attempt_id = (int)$_GET['attempt_id'];
+$attempt_id = (int) $_GET['attempt_id'];
 
-/* FETCH ATTEMPT + QUIZ INFO (INCLUDING PASS MARKS) */
+/* =========================
+   FETCH ATTEMPT + QUIZ INFO
+   ========================= */
 $res = mysqli_query(
     $conn,
-    "SELECT qa.score, q.title, q.id AS quiz_id, q.pass_marks
+    "SELECT 
+        qa.score,
+        q.title,
+        q.id AS quiz_id,
+        q.pass_marks
      FROM quiz_attempts qa
      JOIN quizzes q ON qa.quiz_id = q.id
-     WHERE qa.id = $attempt_id AND qa.student_id = $student_id"
+     WHERE qa.id = $attempt_id
+       AND qa.student_id = $student_id
+       AND qa.status = 'submitted'"
 );
 
 if (mysqli_num_rows($res) === 0) {
@@ -34,25 +51,42 @@ if (mysqli_num_rows($res) === 0) {
 
 $data = mysqli_fetch_assoc($res);
 
-/* TOTAL MARKS */
+$score      = (float) $data['score'];
+$passMarks = (float) $data['pass_marks'];
+$quiz_id   = (int) $data['quiz_id'];
+
+/* =========================
+   TOTAL MARKS (FROM QUESTIONS)
+   ========================= */
 $totalRes = mysqli_query(
     $conn,
-    "SELECT SUM(marks) AS total_marks 
-     FROM questions 
-     WHERE quiz_id = " . $data['quiz_id']
+    "SELECT COALESCE(SUM(marks), 0) AS total_marks
+     FROM questions
+     WHERE quiz_id = $quiz_id"
 );
-$total = mysqli_fetch_assoc($totalRes);
 
-/* PASS / FAIL LOGIC */
-$passed = ($data['score'] >= $data['pass_marks']);
+$totalRow   = mysqli_fetch_assoc($totalRes);
+$totalMarks = (float) $totalRow['total_marks'];
 
-/* STUDENT INFO */
+/* =========================
+   PASS / FAIL LOGIC
+   ========================= */
+$passed = ($score >= $passMarks);
+
+/* =========================
+   STUDENT INFO (OPTIONAL)
+   ========================= */
 $stuRes = mysqli_query(
     $conn,
-    "SELECT name, profile_pic FROM Students WHERE id=$student_id"
+    "SELECT name, profile_pic
+     FROM Students
+     WHERE id = $student_id"
 );
+
 $student = mysqli_fetch_assoc($stuRes);
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -139,7 +173,8 @@ body { background:#f0f2f5; padding:40px; }
     </div>
 
     <div class="score-box">
-        <h1><?= $data['score'] ?> / <?= $total['total_marks'] ?></h1>
+        <h1><?= $score ?> / <?= $totalMarks ?></h1>
+
         <p>Your Score</p>
     </div>
 

@@ -49,6 +49,7 @@ $classes = mysqli_query(
      WHERE teacher_id=$teacher_id AND status='active'"
 );
 
+
 /* =========================
    CREATE QUIZ
    ========================= */
@@ -62,11 +63,7 @@ if (isset($_POST['create_quiz'])) {
     $duration    = (int) $_POST['duration'];
     $pass_marks  = (int) $_POST['pass_marks'];
 
-    // SIMPLE MARKING LOGIC
-    $marks_per_question = ($_POST['marks_per_question'] !== '')
-        ? (float) $_POST['marks_per_question']
-        : 1;
-
+    // Negative marking (optional)
     $negative_marks = ($_POST['negative_marks'] !== '')
         ? (float) $_POST['negative_marks']
         : 0;
@@ -79,7 +76,6 @@ if (isset($_POST['create_quiz'])) {
         $end_time === '' ||
         $duration <= 0 ||
         $pass_marks < 0 ||
-        $marks_per_question <= 0 ||
         $negative_marks < 0
     ) {
         $error = "All required fields must be filled correctly";
@@ -90,23 +86,29 @@ if (isset($_POST['create_quiz'])) {
         mysqli_query(
             $conn,
             "INSERT INTO quizzes
-            (teacher_id, class_id, title, description,
-             start_time, end_time, duration, pass_marks,
-             marks_per_question, negative_marks,
-             status, quiz_rules)
+            (
+                teacher_id, class_id, title, description,
+                start_time, end_time, duration,
+                pass_marks, negative_marks,
+                status, quiz_rules
+            )
             VALUES
-            ($teacher_id, $class_id, '$title', '$description',
-             '$start_time', '$end_time', $duration, $pass_marks,
-             $marks_per_question, $negative_marks,
-             'draft', '$rules_text')"
+            (
+                $teacher_id, $class_id, '$title', '$description',
+                '$start_time', '$end_time', $duration,
+                $pass_marks, $negative_marks,
+                'draft', '$rules_text'
+            )"
         );
 
         unset($_SESSION['quiz_rules']);
         $quiz_id = mysqli_insert_id($conn);
+
         header("Location: add_questions.php?quiz_id=$quiz_id");
         exit();
     }
 }
+
 ?>
 
 
@@ -274,19 +276,14 @@ textarea{resize:vertical}
     </div>
 
     <div class="form-group">
-    <label>Marks per Question (optional)</label>
-    <input type="number" step="0.25" name="marks_per_question" placeholder="Default: 1">
-</div>
-
-<div class="form-group">
-    <label>Negative Marks for Wrong Answer (optional)</label>
-    <input type="number" step="0.25" name="negative_marks" placeholder="Default: 0">
-</div>
-
+        <label>Negative Marks for Wrong Answer (optional)</label>
+        <input type="number" step="0.25" name="negative_marks" placeholder="Default: 0">
+    </div>
 
     <button type="submit" name="create_quiz" class="btn">
         Create Quiz & Add Questions →
     </button>
+
 </form>
 
 <?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>

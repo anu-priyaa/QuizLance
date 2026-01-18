@@ -200,6 +200,7 @@ textarea { resize:vertical; }
             <option value="true_false">True / False</option>
             <option value="one_word">One Word</option>
             <option value="fill_blank">Fill in the Blank</option>
+            <option value="descriptive">Descriptive</option>
             <option value="image">Image Based</option>
             <option value="video">Video Based</option>
             <option value="audio">Audio Based</option>
@@ -250,6 +251,12 @@ textarea { resize:vertical; }
         <input type="text" name="text_answer">
     </div>
 
+    <!-- DESCRIPTIVE -->
+<div id="desc_fields" class="hidden">
+    <label>This is a descriptive question. Students will answer in detail and marks will be evaluated manually.</label>
+</div>
+
+
     <div class="form-group">
         <label>Hint (optional)</label>
         <textarea name="hint"></textarea>
@@ -279,19 +286,29 @@ textarea { resize:vertical; }
 
 <script>
 function toggleFields() {
-    ['mcq_fields','tf_fields','text_fields','media_fields']
+
+    ['mcq_fields','tf_fields','text_fields','media_fields','desc_fields']
         .forEach(id => document.getElementById(id).classList.add('hidden'));
 
     let type = document.getElementById('question_type').value;
 
-    if (type === 'mcq') document.getElementById('mcq_fields').classList.remove('hidden');
-    if (type === 'true_false') document.getElementById('tf_fields').classList.remove('hidden');
+    if (type === 'mcq')
+        document.getElementById('mcq_fields').classList.remove('hidden');
+
+    if (type === 'true_false')
+        document.getElementById('tf_fields').classList.remove('hidden');
+
     if (type === 'one_word' || type === 'fill_blank')
         document.getElementById('text_fields').classList.remove('hidden');
+
     if (['image','video','audio'].includes(type))
         document.getElementById('media_fields').classList.remove('hidden');
+
+    if (type === 'descriptive')
+        document.getElementById('desc_fields').classList.remove('hidden');
 }
 </script>
+
 
 </body>
 </html>
