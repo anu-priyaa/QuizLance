@@ -1,17 +1,15 @@
 <?php
 session_start();
 
+/* ROLE CHECK */
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     header("Location: login.php");
     exit();
 }
 
-date_default_timezone_set('Asia/Kolkata');
-
+/* DB */
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
-if (!$conn) {
-    die("Database connection failed");
-}
+if (!$conn) die("DB Error");
 
 $student_id = $_SESSION['user_id'];
 
@@ -26,25 +24,40 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH SCHEDULED QUIZZES */
-$quizzes = mysqli_query(
-    $conn,
-    "SELECT q.id, q.title, q.start_time, q.end_time, c.class_name
-     FROM quizzes q
-     JOIN Classes c ON q.class_id = c.id
-     JOIN class_students cs ON cs.class_id = c.id
-     WHERE cs.student_id = $student_id
-     ORDER BY q.start_time ASC"
+/* FETCH STUDENT CLASS FROM class_students */
+$classRes = mysqli_query($conn,
+    "SELECT cs.class_id
+     FROM class_students cs
+     WHERE cs.student_id = $student_id"
 );
 
-$now = time();
+$classRow = mysqli_fetch_assoc($classRes);
+
+if (!$classRow) {
+    die("You are not assigned to any class");
+}
+
+$class_id = (int)$classRow['class_id'];
+
+
+/* FETCH ANNOUNCEMENTS */
+$ann = mysqli_query($conn,
+    "SELECT a.*, c.class_name
+     FROM announcements a
+     JOIN classes c ON a.class_id = c.id
+     WHERE a.class_id = $class_id
+       AND a.status = 'active'
+     ORDER BY a.created_at DESC"
+);
+
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scheduled Quizzes | QuizLance</title>
+<title>Student Announcements | QuizLance</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -88,29 +101,34 @@ body{background:#f0f2f5;}
 
 /* ===== MAIN ===== */
 .main-content{
-    padding:90px 40px 40px;
+    padding:70px 40px 40px;
 }
 
 .card{
-    background:white;padding:30px;border-radius:15px;
+    background:white;padding:20px;border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
 }
 
 h2{color:#5A0E24;margin-bottom:20px;}
 
-/* TABLE */
-table{width:100%;border-collapse:collapse;}
-th,td{padding:14px;border-bottom:1px solid #ddd;text-align:left;}
-th{background:#5A0E24;color:white;}
-
-.btn{
-    padding:6px 12px;border-radius:5px;
-    font-weight:bold;font-size:14px;
+/* ANNOUNCEMENTS */
+.announcement {
+    border-left: 5px solid #5A0E24;
+    background: #fafafa;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
 }
-.btn-live{background:#5d9415;color:white;}
-.btn-upcoming{background:#999;color:white;}
-.btn-expired{background:#ccc;color:#333;}
+
+.announcement h4 {
+    color: #5A0E24;
+    margin-bottom: 6px;
+}
+
+.announcement small {
+    color: #777;
+}
 
 /* PROFILE POPUP */
 .profile-popup{
@@ -152,75 +170,22 @@ th{background:#5A0E24;color:white;}
 <div class="main-content">
     <a href="student_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
     <div class="card">
-        <h2>Scheduled Quizzes</h2>
+        <h2>📢 Announcements</h2>
 
-        <table>
-            <tr>
-                <th>Quiz Title</th>
-                <th>Class</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Action</th>
-            </tr>
+        <?php if (mysqli_num_rows($ann) == 0): ?>
+            <p>No announcements available.</p>
+        <?php endif; ?>
 
-            <?php while ($q = mysqli_fetch_assoc($quizzes)):
-            $attemptRes = mysqli_query(
-    $conn,
-    "SELECT id, status 
-     FROM quiz_attempts 
-     WHERE quiz_id={$q['id']} 
-     AND student_id=$student_id
-     LIMIT 1"
-);
-
-$attempt = mysqli_fetch_assoc($attemptRes);
-
-                $start = strtotime($q['start_time']);
-                $end   = strtotime($q['end_time']);
-            ?>
-            <tr>
-                <td><?= htmlspecialchars($q['title']) ?></td>
-                <td><?= htmlspecialchars($q['class_name']) ?></td>
-                <td><?= date("d M Y, h:i A", $start) ?></td>
-                <td><?= date("d M Y, h:i A", $end) ?></td>
-                <td>
-<?php
-/* CASE 1: Student already attempted */
-if ($attempt) {
-
-    if ($attempt['status'] === 'submitted') {
-        // ✅ Quiz completed → View Score
-        echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" class="btn btn-live">
-                View Score
-              </a>';
-    } else {
-        // 🕒 Started but not submitted
-        echo '<a href="attempt_quiz.php?quiz_id='.$q['id'].'" class="btn btn-live">
-                Continue
-              </a>';
-    }
-
-}
-/* CASE 2: Not attempted yet */
-else {
-
-    if ($now >= $start && $now <= $end) {
-        echo '<a href="attempt_quiz.php?quiz_id='.$q['id'].'" class="btn btn-live">
-                Attempt
-              </a>';
-    } elseif ($now < $start) {
-        echo '<span class="btn btn-upcoming">Upcoming</span>';
-    } else {
-        echo '<span class="btn btn-expired">Expired</span>';
-    }
-
-}
-?>
-</td>
-
-            </tr>
-            <?php endwhile; ?>
-        </table>
+        <?php while ($a = mysqli_fetch_assoc($ann)): ?>
+            <div class="announcement">
+                <h4><?= htmlspecialchars($a['title']) ?></h4>
+                <p><?= nl2br(htmlspecialchars($a['message'])) ?></p>
+                <small>
+                    Class: <?= htmlspecialchars($a['class_name']) ?> |
+                    Posted on <?= date('d M Y, h:i A', strtotime($a['created_at'])) ?>
+                </small>
+            </div>
+        <?php endwhile; ?>
     </div>
 </div>
 

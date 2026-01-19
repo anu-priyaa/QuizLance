@@ -1,5 +1,5 @@
 <script>
-/* ===== AUTO LOGOUT AFTER 10 MINUTES ===== */
+
 
 (function () {
     let timer;
@@ -10,7 +10,7 @@
 
     function resetTimer() {
         clearTimeout(timer);
-        timer = setTimeout(logout, 2 * 60 * 1000); // 10 minutes
+        timer = setTimeout(logout, 1 * 60 * 1000); 
     }
 
     window.addEventListener("load", resetTimer);

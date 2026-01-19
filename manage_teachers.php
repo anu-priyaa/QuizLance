@@ -220,5 +220,7 @@ setTimeout(()=>document.querySelector('.alert')?.remove(),3000);
 
 <?php include 'includes/auto_logout.php'; ?>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

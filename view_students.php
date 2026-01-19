@@ -306,5 +306,7 @@ document.getElementById('profileDropdown').style.display='none';
 });
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

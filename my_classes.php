@@ -435,5 +435,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

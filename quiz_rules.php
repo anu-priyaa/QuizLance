@@ -121,70 +121,15 @@ body { background:#f0f2f5; }
 
 .topbar i { font-size:24px; cursor:pointer; }
 
-/* ===== SIDEBAR ===== */
-.sidebar {
-    width:260px;
-    background:#5A0E24;
-    color:white;
-    display:flex;
-    flex-direction:column;
-    position:fixed;
-    top:60px;
-    left:0;
-    height:calc(100vh - 60px);
-    transition:0.3s ease;
-    z-index:1000;
-}
-.sidebar.collapsed { transform:translateX(-100%); }
-.sidebar.no-transition { transition:none !important; }
-
-.sidebar-profile {
-    text-align:center;
-    padding:25px 15px;
-    border-bottom:1px solid rgba(255,255,255,0.15);
-    cursor:pointer;
-}
-.sidebar-profile img {
-    width:85px;
-    height:85px;
-    border-radius:50%;
-    object-fit:cover;
-    border:3px solid #5d9415;
-}
-.sidebar-profile h3 {
-    margin-top:10px;
-    font-size:16px;
-}
-
-.sidebar a {
-    padding:15px 25px;
-    text-decoration:none;
-    color:#d1d1d1;
-    display:flex;
-    align-items:center;
-}
-.sidebar a i {
-    margin-right:15px;
-    width:20px;
-}
-.sidebar a:hover,
-.sidebar a.active {
-    background:#861434;
-    color:white;
-}
-
 /* ===== MAIN CONTENT ===== */
 .main-content {
-    margin-left:260px;
-    padding:90px 40px 40px;
-    transition:0.3s ease;
+    padding:70px 40px 40px;
 }
-.main-content.full { margin-left:0; }
 
 /* ===== PAGE CARD ===== */
 .page-card {
     background:white;
-    padding:30px;
+    padding:20px;
     border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
@@ -283,24 +228,10 @@ button:hover {
     </div>
 </div>
 
-<!-- SIDEBAR -->
-<div class="sidebar collapsed no-transition" id="sidebar">
-    <div class="sidebar-profile" onclick="openProfilePopup()">
-        <img src="<?= $imgSrc ?>">
-        <h3><?= htmlspecialchars($teacher_name) ?></h3>
-    </div>
-
-    <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
-    <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
-    <a href="view_attendance_teacher.php">
-        <i class="fas fa-clipboard-list"></i> Attendance
-    </a>
-</div>
-
 <!-- MAIN CONTENT -->
-<div class="main-content full" id="mainContent">
+<div class="main-content">
+
+    <a href="teacher_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
 
     <div class="page-card">
         <h1>Quiz Rules & Instructions</h1>
@@ -333,28 +264,6 @@ button:hover {
 </div>
 
 <script>
-const menuToggle  = document.getElementById('menuToggle');
-const sidebar     = document.getElementById('sidebar');
-const mainContent = document.getElementById('mainContent');
-
-window.addEventListener('DOMContentLoaded', () => {
-    const state = sessionStorage.getItem('sidebar');
-    if (state === 'open') {
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('full');
-    }
-    setTimeout(() => sidebar.classList.remove('no-transition'), 50);
-});
-
-menuToggle.onclick = () => {
-    sidebar.classList.toggle('collapsed');
-    mainContent.classList.toggle('full');
-    sessionStorage.setItem(
-        'sidebar',
-        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
-    );
-};
-
 function toggleProfileMenu() {
     const menu = document.getElementById('profileDropdown');
     menu.style.display = menu.style.display === 'block' ? 'none' : 'block';

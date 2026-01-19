@@ -315,5 +315,7 @@ function openProfilePopup(){document.getElementById('profilePopup').style.displa
 function closeProfilePopup(){document.getElementById('profilePopup').style.display='none';}
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

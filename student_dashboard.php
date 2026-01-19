@@ -335,6 +335,13 @@ body { background:#f0f2f5; }
                 <h3>Certificates</h3>
             </div>
         </a>
+
+        <a href="student_announcements.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-award"></i>
+                <h3>Announcements</h3>
+            </div>
+        </a>
     </div>
 </div>
 

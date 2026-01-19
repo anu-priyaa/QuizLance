@@ -185,5 +185,7 @@ const sidebar=document.getElementById('sidebar');
 menuToggle.onclick=()=>sidebar.classList.toggle('collapsed');
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>

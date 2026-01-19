@@ -116,57 +116,40 @@ body{background:#f0f2f5}
 }
 .topbar i{font-size:24px;cursor:pointer}
 
-/* SIDEBAR */
-.sidebar{
-    width:260px;background:#5A0E24;color:white;
-    display:flex;flex-direction:column;
-    position:fixed;top:60px;left:0;
-    height:calc(100vh - 60px);
-    transition:.3s ease;z-index:1000
+/* TOP PROFILE */
+.top-profile{
+    margin-left:auto;display:flex;align-items:center;
+    gap:8px;cursor:pointer;position:relative;
 }
-.sidebar.collapsed{transform:translateX(-100%)}
-.sidebar.no-transition{transition:none!important}
+.top-profile img{
+    width:36px;height:36px;border-radius:50%;
+    object-fit:cover;border:2px solid #5d9415;
+}
+.top-profile span{font-size:14px;font-weight:500;}
 
-.sidebar-profile{
-    text-align:center;padding:25px 15px;
-    border-bottom:1px solid rgba(255,255,255,.15);
-    cursor:pointer
+/* DROPDOWN */
+.profile-dropdown{
+    display:none;position:absolute;right:0;top:55px;
+    background:white;border-radius:8px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.15);
+    min-width:180px;overflow:hidden;z-index:3000;
 }
-.sidebar-profile img{
-    width:85px;height:85px;
-    border-radius:50%;
-    border:3px solid #5d9415;
-    object-fit:cover
+.profile-dropdown a{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 15px;text-decoration:none;
+    color:#333;font-size:14px;
 }
-.sidebar-profile h3{margin-top:10px;font-size:16px}
-
-.sidebar a{
-    padding:15px 25px;
-    text-decoration:none;
-    color:#d1d1d1;
-    display:flex;align-items:center
-}
-.sidebar a i{margin-right:15px;width:20px}
-.sidebar a:hover,.sidebar a.active{
-    background:#861434;color:white
-}
-.logout{
-    margin-top:auto;
-    border-top:1px solid rgba(255,255,255,.15)
-}
+.profile-dropdown a:hover{background:#f2f2f2;}
 
 /* MAIN CONTENT */
 .main-content{
-    margin-left:260px;
-    padding:90px 40px 40px;
-    transition:.3s ease
+    padding:70px 40px 40px;
 }
-.main-content.full{margin-left:0}
 
 /* PAGE CARD */
 .page-card{
     background:white;
-    padding:30px;
+    padding:20px;
     border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,.05);
     border-left:5px solid #5d9415;
@@ -254,26 +237,21 @@ th{background:#5A0E24;color:white}
 
 <!-- TOP BAR -->
 <div class="topbar">
-    <i class="fas fa-bars" id="menuToggle"></i>
-</div>
-
-<!-- SIDEBAR -->
-<div class="sidebar collapsed no-transition" id="sidebar">
-
-    <div class="sidebar-profile" onclick="openProfilePopup()">
+    <div class="top-profile" onclick="toggleProfileMenu()">
         <img src="<?= $imgSrc ?>">
-        <h3><?= htmlspecialchars($teacher_name) ?></h3>
-    </div>
+        <span><?= htmlspecialchars($teacher_name) ?></span>
 
-    <a href="teacher_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a>
-    <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
-    <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
-    <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
+        <div class="profile-dropdown" id="profileDropdown">
+            <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Edit Profile</a>
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="main-content full" id="mainContent">
+<div class="main-content">
+
+    <a href="teacher_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
 
 <div class="page-card">
     <h1>Scheduled Quizzes</h1>
@@ -334,37 +312,17 @@ th{background:#5A0E24;color:white}
 </div>
 
 <script>
-const menuToggle=document.getElementById('menuToggle');
-const sidebar=document.getElementById('sidebar');
-const mainContent=document.getElementById('mainContent');
-
-/* restore sidebar */
-window.addEventListener('DOMContentLoaded',()=>{
-    const state=sessionStorage.getItem('sidebar');
-    if(state==='open'){
-        sidebar.classList.remove('collapsed');
-        mainContent.classList.remove('full');
-    }
-    setTimeout(()=>sidebar.classList.remove('no-transition'),50);
+function toggleProfileMenu(){
+    const m=document.getElementById('profileDropdown');
+    m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',e=>{
+    const p=document.querySelector('.top-profile');
+    if(p && !p.contains(e.target))
+        document.getElementById('profileDropdown').style.display='none';
 });
-
-/* toggle sidebar */
-menuToggle.onclick=()=>{
-    sidebar.classList.toggle('collapsed');
-    mainContent.classList.toggle('full');
-    sessionStorage.setItem(
-        'sidebar',
-        sidebar.classList.contains('collapsed')?'closed':'open'
-    );
-};
-
-/* profile popup */
-function openProfilePopup(){
-    document.getElementById('profilePopup').style.display='flex';
-}
-function closeProfilePopup(){
-    document.getElementById('profilePopup').style.display='none';
-}
+function openProfilePopup(){document.getElementById('profilePopup').style.display='flex';}
+function closeProfilePopup(){document.getElementById('profilePopup').style.display='none';}
 
 /* delete modal */
 function openModal(id){
@@ -375,6 +333,8 @@ function closeModal(){
     document.getElementById('deleteModal').style.display='none';
 }
 </script>
+
+<?php include 'includes/auto_logout.php'; ?>
 
 </body>
 </html>

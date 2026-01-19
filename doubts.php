@@ -308,5 +308,7 @@ function closeProfilePopup(){
 }
 </script>
 
+<?php include 'includes/auto_logout.php'; ?>
+
 </body>
 </html>
