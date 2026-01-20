@@ -10,7 +10,7 @@
 
     function resetTimer() {
         clearTimeout(timer);
-        timer = setTimeout(logout, 1 * 60 * 1000); 
+        timer = setTimeout(logout, 20 * 60 * 1000); 
     }
 
     window.addEventListener("load", resetTimer);

@@ -191,12 +191,6 @@ body{background:#f0f2f5;}
     <a href="manage_students.php">
         <i class="fas fa-user-graduate"></i> Manage Students
     </a>
-
-    <div class="logout">
-        <a href="logout.php">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
 </div>
 
 <!-- MAIN -->

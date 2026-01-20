@@ -33,6 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['user_id']   = $row['id'];
         $_SESSION['user_name'] = $row['name'];
         $_SESSION['role']      = 'admin';
+        $_SESSION['admin_profile_pic'] = $row['profile_pic'];
         header("Location: admin_dashboard.php");
         exit();
     }

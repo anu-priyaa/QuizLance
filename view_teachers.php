@@ -175,6 +175,21 @@ th{background:#5A0E24;color:white;}
 
 <h2 style="margin-bottom:20px;">All Teachers</h2>
 
+<a href="download_teachers_pdf.php"
+   style="
+     display:inline-block;
+     margin-bottom:15px;
+     background:#5d9415;
+     color:white;
+     padding:10px 15px;
+     border-radius:6px;
+     text-decoration:none;
+     font-weight:bold;
+   ">
+   <i class="fas fa-download"></i> Download PDF
+</a>
+
+
 <table>
 <tr>
     <th>Name</th>

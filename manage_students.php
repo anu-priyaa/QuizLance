@@ -189,15 +189,27 @@ th{background:#5A0E24;color:white;}
     <a href="manage_teachers.php"><i class="fas fa-chalkboard-teacher"></i> Manage Teachers</a>
     <a href="manage_students.php" class="active"><i class="fas fa-user-graduate"></i> Manage Students</a>
 
-    <div class="logout">
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    </div>
 </div>
 
 <div class="main-content full" id="mainContent">
 
+<a href="download_students_pdf.php"
+   style="
+     display:inline-block;
+     margin-bottom:15px;
+     background:#5d9415;
+     color:white;
+     padding:10px 15px;
+     border-radius:6px;
+     text-decoration:none;
+     font-weight:bold;
+   ">
+   <i class="fas fa-download"></i> Download Students PDF
+</a>
+
+
 <div class="dashboard-grid">
-    <a href="?view=all" class="menu-card"><i class="fas fa-users"></i><h3>All Students</h3><p><?= $total_students ?></p></a>
+    <a href="?view=all" class="menu-card"><i class="fas fa-eye"></i><h3>View Students</h3><p><?= $total_students ?></p></a>
     <a href="?view=active" class="menu-card"><i class="fas fa-user-check"></i><h3>Active Students</h3><p><?= $active_students ?></p></a>
     <a href="?view=inactive" class="menu-card"><i class="fas fa-user-times"></i><h3>Inactive Students</h3><p><?= $inactive_students ?></p></a>
 </div>

@@ -69,11 +69,13 @@ if (isset($_POST['add_teacher'])) {
 /* ACTIVATE / DEACTIVATE */
 if(isset($_GET['disable'])){
     mysqli_query($conn,"UPDATE Teachers SET status='inactive' WHERE id=".(int)$_GET['disable']);
-    header("Location: manage_teachers.php"); exit();
+    $redirect_view = $_GET['view'] ?? 'all';
+    header("Location: manage_teachers.php?view=$redirect_view"); exit();
 }
 if(isset($_GET['activate'])){
     mysqli_query($conn,"UPDATE Teachers SET status='active' WHERE id=".(int)$_GET['activate']);
-    header("Location: manage_teachers.php"); exit();
+    $redirect_view = $_GET['view'] ?? 'all';
+    header("Location: manage_teachers.php?view=$redirect_view"); exit();
 }
 
 /* FETCH TEACHERS */
@@ -165,7 +167,7 @@ th{background:#5A0E24;color:white;}
     <a href="admin_dashboard.php"><i class="fas fa-chart-pie"></i> Overview</a>
     <a href="manage_teachers.php" class="active"><i class="fas fa-chalkboard-teacher"></i> Manage Teachers</a>
     <a href="manage_students.php"><i class="fas fa-user-graduate"></i> Manage Students</a>
-    <div class="logout"><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></div>
+    
 </div>
 
 <div class="main-content full" id="mainContent">
@@ -182,7 +184,31 @@ th{background:#5A0E24;color:white;}
     <a href="?view=inactive" class="menu-card"><i class="fas fa-ban"></i><h3>Inactive Teachers</h3></a>
 </div>
 
-
+<?php if ($view !== 'all'): ?>
+<h2 style="margin:20px 0;"><?= ucfirst($view) ?> Teachers</h2>
+<table>
+<tr>
+    <th>Name</th>
+    <th>Username</th>
+    <th>Email</th>
+    <th>Status</th>
+    <th>Action</th>
+</tr>
+<?php while($t = mysqli_fetch_assoc($teachers)): ?>
+<tr>
+    <td><?= htmlspecialchars($t['name']) ?></td>
+    <td><?= htmlspecialchars($t['username']) ?></td>
+    <td><?= htmlspecialchars($t['email']) ?></td>
+    <td class="<?= $t['status'] ?>"><?= ucfirst($t['status']) ?></td>
+    <td>
+        <?= $t['status'] === 'active'
+            ? "<a href='?view=$view&disable={$t['id']}'>Deactivate</a>"
+            : "<a href='?view=$view&activate={$t['id']}'>Activate</a>" ?>
+    </td>
+</tr>
+<?php endwhile; ?>
+</table>
+<?php endif; ?>
 
 </div>
 
@@ -217,8 +243,6 @@ document.addEventListener('click',e=>{
 });
 setTimeout(()=>document.querySelector('.alert')?.remove(),3000);
 </script>
-
-<?php include 'includes/auto_logout.php'; ?>
 
 <?php include 'includes/auto_logout.php'; ?>
 

@@ -11,18 +11,23 @@ if (!$conn) {
     die("Database connection failed");
 }
 
+$admin_id = $_SESSION['user_id'];
+
 /* =========================
    FETCH ADMIN INFO
    ========================= */
-$res = mysqli_query($conn, "SELECT name, profile_pic FROM Admins LIMIT 1");
+$res = mysqli_query($conn, "SELECT name, profile_pic FROM Admins WHERE id = $admin_id");
 $admin = mysqli_fetch_assoc($res);
 
 $admin_name = $admin['name'] ?? 'Admin';
 $profile_pic = $admin['profile_pic'] ?? null;
 
-$imgSrc = $profile_pic
-    ? htmlspecialchars($profile_pic) . '?t=' . time()
-    : 'https://via.placeholder.com/85';
+/* USE UPDATED PROFILE PIC FROM SESSION */
+$imgSrc = !empty($_SESSION['admin_profile_pic'])
+    ? htmlspecialchars($_SESSION['admin_profile_pic']) . '?t=' . time()
+    : ($profile_pic
+        ? htmlspecialchars($profile_pic) . '?t=' . time()
+        : 'https://via.placeholder.com/85');
 
 /* =========================
    ADD TEACHER MANUALLY
