@@ -165,15 +165,16 @@ body{background:#f0f2f5}
     padding:70px 40px 40px;
 }
 
-/* CARD */
 .card{
     background:white;
     padding:20px;
     border-radius:15px;
-    max-width:600px;
+    max-width:700px;          /* ⬅ increased from 600px */
+    width:100%;
     box-shadow:0 4px 12px rgba(0,0,0,.05);
-    border-left:5px solid #5d9415
+    border-left:5px solid #5d9415;
 }
+
 .card h2{color:#5A0E24;margin-bottom:20px}
 
 .form-group{margin-bottom:15px}
@@ -183,6 +184,53 @@ input,textarea,select{
     border-radius:5px;border:1px solid #ccc
 }
 textarea{resize:vertical}
+
+/* IMAGE SIDE */
+.hero-imageee {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-imageee img {
+    max-width: 95%;
+    max-height: 360px;
+    height: auto;
+}
+
+/* FORM SIDE */
+.page-card {
+    flex: 1;
+}
+
+.rules-layout{
+    display:flex;
+    gap:40px;
+    align-items:center;
+}
+
+.rules-layout .card{
+    flex: 1.4;   /* ⬅ form gets more width */
+}
+
+.rules-layout .hero-imageee{
+    flex: 1;     /* ⬅ image slightly smaller */
+}
+
+
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .rules-layout {
+        flex-direction: column;
+    }
+
+    .hero-imageee img {
+        max-height: 260px;
+    }
+}
+
 
 .btn{
     background:#5d9415;color:white;
@@ -215,68 +263,77 @@ textarea{resize:vertical}
 
     <a href="teacher_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
 
-<div class="card">
-<h2>Create New Quiz</h2>
+    <!-- ✅ WRAPPER ADDED -->
+    <div class="rules-layout">
 
-<form method="POST">
+        <div class="card">
+            <h2>Create New Quiz</h2>
 
-    <div class="form-group">
-        <label>Quiz Title *</label>
-        <input type="text" name="title" required>
+            <form method="POST">
+
+                <div class="form-group">
+                    <label>Quiz Title *</label>
+                    <input type="text" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description (optional)</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Class *</label>
+                    <select name="class_id" required>
+                        <option value="">-- Select Class --</option>
+                        <?php while ($c = mysqli_fetch_assoc($classes)): ?>
+                            <option value="<?= $c['id'] ?>">
+                                <?= htmlspecialchars($c['class_name']) ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Start Time *</label>
+                    <input type="datetime-local" name="start_time" required>
+                </div>
+
+                <div class="form-group">
+                    <label>End Time *</label>
+                    <input type="datetime-local" name="end_time" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Duration (minutes) *</label>
+                    <input type="number" name="duration" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Passing Marks *</label>
+                    <input type="number" name="pass_marks" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Negative Marks for Wrong Answer (optional)</label>
+                    <input type="number" step="0.25" name="negative_marks" placeholder="Default: 0">
+                </div>
+
+                <button type="submit" name="create_quiz" class="btn">
+                    Create Quiz & Add Questions →
+                </button>
+
+            </form>
+
+            <?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
+        </div>
+
+        <div class="hero-imageee">
+            <img src="images/quiz_image6.png" alt="Teacher creating a quiz">
+        </div>
+
     </div>
-
-    <div class="form-group">
-        <label>Description (optional)</label>
-        <textarea name="description" rows="3"></textarea>
-    </div>
-
-    <div class="form-group">
-        <label>Select Class *</label>
-        <select name="class_id" required>
-            <option value="">-- Select Class --</option>
-            <?php while ($c = mysqli_fetch_assoc($classes)): ?>
-                <option value="<?= $c['id'] ?>">
-                    <?= htmlspecialchars($c['class_name']) ?>
-                </option>
-            <?php endwhile; ?>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label>Start Time *</label>
-        <input type="datetime-local" name="start_time" required>
-    </div>
-
-    <div class="form-group">
-        <label>End Time *</label>
-        <input type="datetime-local" name="end_time" required>
-    </div>
-
-    <div class="form-group">
-        <label>Duration (minutes) *</label>
-        <input type="number" name="duration" min="1" required>
-    </div>
-
-    <div class="form-group">
-        <label>Passing Marks *</label>
-        <input type="number" name="pass_marks" min="0" required>
-    </div>
-
-    <div class="form-group">
-        <label>Negative Marks for Wrong Answer (optional)</label>
-        <input type="number" step="0.25" name="negative_marks" placeholder="Default: 0">
-    </div>
-
-    <button type="submit" name="create_quiz" class="btn">
-        Create Quiz & Add Questions →
-    </button>
-
-</form>
-
-<?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
-
 </div>
-</div>
+
 
 <script>
 function toggleProfileMenu(){

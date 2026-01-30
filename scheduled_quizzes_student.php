@@ -185,14 +185,22 @@ $attempt = mysqli_fetch_assoc($attemptRes);
                 <td><?= date("d M Y, h:i A", $end) ?></td>
                 <td>
 <?php
-/* CASE 1: Student already attempted */
 if ($attempt) {
 
     if ($attempt['status'] === 'submitted') {
-        // ✅ Quiz completed → View Score
-        echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" class="btn btn-live">
+
+        // View Score button
+        echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" 
+                 class="btn btn-live" style="margin-right:6px;">
                 View Score
               </a>';
+
+        // Download Answer Key button
+        echo '<a href="download_answer_key.php?quiz_id='.$q['id'].'" 
+                 class="btn btn-live">
+                Download Answer Key
+              </a>';
+
     } else {
         // 🕒 Started but not submitted
         echo '<a href="attempt_quiz.php?quiz_id='.$q['id'].'" class="btn btn-live">
@@ -201,6 +209,7 @@ if ($attempt) {
     }
 
 }
+
 /* CASE 2: Not attempted yet */
 else {
 

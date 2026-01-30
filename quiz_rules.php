@@ -119,6 +119,8 @@ body { background:#f0f2f5; }
     background:#f2f2f2;
 }
 
+
+
 .topbar i { font-size:24px; cursor:pointer; }
 
 /* ===== MAIN CONTENT ===== */
@@ -127,14 +129,44 @@ body { background:#f0f2f5; }
 }
 
 /* ===== PAGE CARD ===== */
-.page-card {
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.05);
-    border-left:5px solid #5d9415;
-    max-width:650px;
+/* RULES PAGE LAYOUT */
+.rules-layout {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    max-width: 1100px;
 }
+
+/* IMAGE SIDE */
+.hero-imageee {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-imageee img {
+    max-width: 95%;
+    max-height: 360px;
+    height: auto;
+}
+
+/* FORM SIDE */
+.page-card {
+    flex: 1;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .rules-layout {
+        flex-direction: column;
+    }
+
+    .hero-imageee img {
+        max-height: 260px;
+    }
+}
+
 .page-card h1 {
     color:#5A0E24;
     margin-bottom:10px;
@@ -233,6 +265,8 @@ button:hover {
 
     <a href="teacher_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
 
+    <div class="rules-layout">
+
     <div class="page-card">
         <h1>Quiz Rules & Instructions</h1>
         <p>Enter the rules exactly as students should see before starting the quiz.</p>
@@ -251,6 +285,13 @@ button:hover {
             <div class="alert"><?= $error ?></div>
         <?php endif; ?>
     </div>
+
+    <div class="hero-imageee">
+        <img src="images/quiz_image5.png" alt="Teacher setting quiz rules">
+    </div>
+
+</div>
+
 
 </div>
 

@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+/* ===============================
+   TEACHER PROTECTION
+   =============================== */
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'teacher') {
     die("Unauthorized access");
 }
@@ -9,19 +12,26 @@ if (!isset($_GET['quiz_id']) || empty($_GET['quiz_id'])) {
     die("Invalid quiz selected");
 }
 
-$quiz_id = intval($_GET['quiz_id']);
+$quiz_id    = (int)$_GET['quiz_id'];
 $teacher_id = $_SESSION['user_id'];
 
+/* ===============================
+   DATABASE CONNECTION
+   =============================== */
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
 if (!$conn) {
     die("Database connection failed");
 }
 
-/* VERIFY QUIZ BELONGS TO THIS TEACHER */
+/* ===============================
+   VERIFY QUIZ BELONGS TO TEACHER
+   =============================== */
 $quiz_check = mysqli_query(
     $conn,
-    "SELECT title FROM quizzes 
-     WHERE id=$quiz_id AND teacher_id=$teacher_id"
+    "SELECT title, start_time
+     FROM quizzes
+     WHERE id = $quiz_id
+     AND teacher_id = $teacher_id"
 );
 
 if (mysqli_num_rows($quiz_check) === 0) {
@@ -29,16 +39,19 @@ if (mysqli_num_rows($quiz_check) === 0) {
 }
 
 $quiz = mysqli_fetch_assoc($quiz_check);
-$quiz_title = $quiz['title'];
+$quiz_title   = $quiz['title'];
+$conducted_on = date("d M Y, h:i A", strtotime($quiz['start_time']));
 
-/* FETCH ATTENDANCE DATA */
+/* ===============================
+   FETCH ATTENDANCE DATA
+   =============================== */
 $query = "
-SELECT 
+SELECT
     s.admission_id,
     s.name,
     s.email
 FROM quiz_attempts qa
-JOIN students s ON qa.student_id = s.id
+JOIN Students s ON qa.student_id = s.id
 WHERE qa.quiz_id = $quiz_id
 ORDER BY s.name
 ";
@@ -49,23 +62,26 @@ if (mysqli_num_rows($result) === 0) {
     die("No students attempted this quiz");
 }
 
-/* LOAD FPDF */
+/* ===============================
+   LOAD FPDF
+   =============================== */
 require('fpdf/fpdf.php');
 
+/* ===============================
+   GENERATE PDF
+   =============================== */
 $pdf = new FPDF();
 $pdf->AddPage();
 
 /* TITLE */
 $pdf->SetFont('Arial', 'B', 16);
 $pdf->Cell(0, 10, 'Quiz Attendance Report', 0, 1, 'C');
-
 $pdf->Ln(4);
 
 /* QUIZ INFO */
 $pdf->SetFont('Arial', '', 12);
 $pdf->Cell(0, 8, 'Quiz Title: ' . $quiz_title, 0, 1);
-$pdf->Cell(0, 8, 'Generated On: ' . date("d-m-Y"), 0, 1);
-
+$pdf->Cell(0, 8, 'Conducted On: ' . $conducted_on, 0, 1);
 $pdf->Ln(5);
 
 /* TABLE HEADER */
@@ -85,7 +101,9 @@ while ($row = mysqli_fetch_assoc($result)) {
     $pdf->Ln();
 }
 
-/* OUTPUT PDF */
+/* ===============================
+   OUTPUT PDF
+   =============================== */
 $fileName = "Attendance_Quiz_" . $quiz_id . ".pdf";
 $pdf->Output('D', $fileName);
 exit;

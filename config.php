@@ -29,3 +29,17 @@ $client->setRedirectUri($_ENV['GOOGLE_REDIRECT_URI']);
 $client->addScope('email');
 $client->addScope('profile');
 $client->setPrompt('select_account');
+
+/* =========================
+   DATABASE CONNECTION
+   ========================= */
+$conn = mysqli_connect(
+    "localhost",
+    "root",
+    "",
+    "QuizLance"
+);
+
+if (!$conn) {
+    die("Database connection failed: " . mysqli_connect_error());
+}

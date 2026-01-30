@@ -25,6 +25,9 @@ if (isset($_POST['add_question'])) {
     $hint          = trim(mysqli_real_escape_string($conn, $_POST['hint']));
     $explanation   = trim(mysqli_real_escape_string($conn, $_POST['answer_explanation']));
     $marks         = (int) $_POST['marks'];
+    $time_limit = $_POST['time_limit'] ?? '';
+$time_limit = ($time_limit === '') ? NULL : (int)$time_limit;
+
 
     $media_path = NULL;
 
@@ -70,9 +73,19 @@ if (isset($_POST['add_question'])) {
         mysqli_query(
             $conn,
             "INSERT INTO questions
-            (quiz_id, question_type, question_text, media_path, hint, answer_explanation, marks)
-            VALUES
-            ($quiz_id, '$question_type', '$question_text', '$media_path', '$hint', '$explanation', $marks)"
+(quiz_id, question_type, question_text, media_path, hint, answer_explanation, marks, time_limit)
+VALUES
+(
+    $quiz_id,
+    '$question_type',
+    '$question_text',
+    '$media_path',
+    '$hint',
+    '$explanation',
+    $marks,
+    " . ($time_limit === NULL ? "NULL" : $time_limit) . "
+)
+"
         );
 
         $question_id = mysqli_insert_id($conn);
@@ -271,6 +284,15 @@ textarea { resize:vertical; }
         <label>Marks *</label>
         <input type="number" name="marks" min="1" required>
     </div>
+
+    <div class="form-group">
+    <label>Time Limit per Question (seconds) – optional</label>
+    <input type="number"
+           name="time_limit"
+           min="5"
+           placeholder="Leave empty for no time limit">
+</div>
+
 
     <div class="actions">
         <button class="btn" name="add_question">➕ Add Question</button>

@@ -385,6 +385,9 @@ button:hover {
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
     <a href="manage_classes.php" class="active"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="archived_classes.php">
+        <i class="fas fa-archive"></i> Archived Classes
+    </a>
     <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
 </div>

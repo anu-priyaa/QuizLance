@@ -179,20 +179,31 @@ if (time() > $expireTime) {
    FETCH QUESTIONS (WITH SHUFFLE LOGIC)
    =============================== */
 if ($shuffle_questions === 'yes') {
-    $questions = mysqli_query(
+    $res = mysqli_query(
         $conn,
-        "SELECT * FROM questions 
-         WHERE quiz_id=$quiz_id 
-         ORDER BY RAND()"
+        "SELECT * FROM questions WHERE quiz_id=$quiz_id ORDER BY RAND()"
     );
 } else {
-    $questions = mysqli_query(
+    $res = mysqli_query(
         $conn,
-        "SELECT * FROM questions 
-         WHERE quiz_id=$quiz_id 
-         ORDER BY id"
+        "SELECT * FROM questions WHERE quiz_id=$quiz_id ORDER BY id"
     );
 }
+
+$questionList = [];
+while ($row = mysqli_fetch_assoc($res)) {
+    $questionList[] = $row;
+}
+
+$totalQuestions = count($questionList);
+$currentIndex = isset($_GET['q']) ? (int)$_GET['q'] : 0;
+
+if ($currentIndex >= $totalQuestions) {
+    header("Location: submit_quiz.php?quiz_id=$quiz_id");
+    exit();
+}
+
+$q = $questionList[$currentIndex];
 
 
 ?>

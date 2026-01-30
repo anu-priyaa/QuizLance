@@ -32,11 +32,16 @@ if (isset($_POST['reply'])) {
 
     if ($answer !== '') {
         mysqli_query(
-            $conn,
-            "UPDATE doubts
-             SET answer='$answer', status='answered'
-             WHERE id=$doubt_id AND teacher_id=$teacher_id"
-        );
+    $conn,
+    "UPDATE doubts d
+     JOIN Students s ON d.student_id = s.id
+     JOIN class_students cs ON cs.student_id = s.id
+     JOIN Classes c ON cs.class_id = c.id
+     SET d.answer = '$answer', d.status = 'answered'
+     WHERE d.id = $doubt_id
+     AND c.teacher_id = $teacher_id"
+);
+
     }
 }
 
@@ -46,10 +51,13 @@ $doubts = mysqli_query(
     "SELECT d.*, s.name AS student_name, c.class_name
      FROM doubts d
      JOIN Students s ON d.student_id = s.id
-     JOIN Classes c ON d.class_id = c.id
-     WHERE d.teacher_id = $teacher_id
+     JOIN class_students cs ON cs.student_id = s.id
+     JOIN Classes c ON cs.class_id = c.id
+     WHERE c.teacher_id = $teacher_id
      ORDER BY d.created_at DESC"
 );
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

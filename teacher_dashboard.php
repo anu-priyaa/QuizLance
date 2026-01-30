@@ -327,6 +327,9 @@ body {
     <a href="manage_classes.php">
         <i class="fas fa-users"></i> Manage Class
     </a>
+    <a href="archived_classes.php">
+        <i class="fas fa-archive"></i> Archived Classes
+    </a>
     <a href="view_students.php">
         <i class="fas fa-eye"></i> View Students
     </a>
