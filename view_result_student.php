@@ -88,9 +88,80 @@ body{background:#f0f2f5;}
 }
 .profile-dropdown a:hover{background:#f2f2f2;}
 
+/* ===== TOPBAR HAMBURGER ===== */
+.hamburger {
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: 260px;
+    background: #5A0E24;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    height: calc(100vh - 60px);
+    transition: 0.3s ease;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.sidebar-profile {
+    text-align: center;
+    padding: 25px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+}
+
+.sidebar-profile img {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #5d9415;
+}
+
+.sidebar-profile h3 {
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+.sidebar a {
+    padding: 15px 25px;
+    text-decoration: none;
+    color: #d1d1d1;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar a i {
+    margin-right: 15px;
+    width: 20px;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background: #861434;
+    color: white;
+}
+
 /* ===== MAIN ===== */
 .main-content{
-    padding:70px 40px 40px;
+    margin-left: 260px;
+    padding: 70px 40px 40px;
+    transition: 0.3s ease;
+}
+
+.main-content.full {
+    margin-left: 0;
 }
 
 .page-title{color:#5A0E24;margin-bottom:20px;}
@@ -141,6 +212,7 @@ select{padding:12px;border-radius:6px;border:1px solid #ccc;}
 
 <!-- TOP BAR -->
 <div class="topbar">
+    <i class="fas fa-bars hamburger" id="menuToggle"></i>
     <div class="top-profile" onclick="toggleProfileMenu()">
         <img src="<?= $imgSrc ?>">
         <span><?= htmlspecialchars($student_name) ?></span>
@@ -156,8 +228,20 @@ select{padding:12px;border-radius:6px;border:1px solid #ccc;}
     </div>
 </div>
 
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-profile" onclick="openProfilePopup()">
+        <img src="<?= $imgSrc ?>">
+        <h3><?= htmlspecialchars($student_name) ?></h3>
+    </div>
+    <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="view_result_student.php" class="active"><i class="fas fa-chart-line"></i> Results</a>
+    <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
+</div>
+
 <!-- MAIN -->
-<div class="main-content">
+<div class="main-content" id="mainContent">
     <a href="student_dashboard.php" style="display: inline-block; background: #5A0E24; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">← Back to Dashboard</a>
     <h1 class="page-title">My Quiz Results</h1>
 
@@ -201,6 +285,15 @@ select{padding:12px;border-radius:6px;border:1px solid #ccc;}
 </div>
 
 <script>
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+menuToggle.onclick = () => {
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('full');
+};
+
 function toggleProfileMenu(){
     const m=document.getElementById('profileDropdown');
     m.style.display=m.style.display==='block'?'none':'block';

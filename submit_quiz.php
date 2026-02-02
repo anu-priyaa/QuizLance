@@ -13,13 +13,18 @@ if (!$conn) {
 
 $student_id = (int) $_SESSION['user_id'];
 
-if (!isset($_POST['attempt_id'], $_POST['quiz_id'], $_POST['answer'])) {
+// Accept both POST and GET parameters
+$attempt_id = isset($_POST['attempt_id']) ? (int)$_POST['attempt_id'] : (isset($_GET['attempt_id']) ? (int)$_GET['attempt_id'] : 0);
+$quiz_id = isset($_POST['quiz_id']) ? (int)$_POST['quiz_id'] : (isset($_GET['quiz_id']) ? (int)$_GET['quiz_id'] : 0);
+
+if ($attempt_id === 0 || $quiz_id === 0) {
     die("Invalid submission");
 }
 
-$attempt_id = (int) $_POST['attempt_id'];
-$quiz_id    = (int) $_POST['quiz_id'];
-$answers    = $_POST['answer'];
+
+/* Get POST answers if available, otherwise empty */
+$answers = $_POST['answer'] ?? [];
+
 
 /* ===============================
    FETCH ATTEMPT
@@ -70,10 +75,17 @@ $submitted_at = ($now > $expireTime)
 $total_score = 0;
 $total_marks = 0;
 
+/* First, save any POST answers if they exist */
 foreach ($answers as $question_id => $selected_answer) {
-
     $question_id = (int) $question_id;
     $selected_answer = trim(mysqli_real_escape_string($conn, $selected_answer));
+
+    /* DELETE existing answer to prevent duplicates */
+    mysqli_query(
+        $conn,
+        "DELETE FROM student_answers
+         WHERE attempt_id=$attempt_id AND question_id=$question_id"
+    );
 
     /* SAVE STUDENT ANSWER */
     mysqli_query(
@@ -81,63 +93,79 @@ foreach ($answers as $question_id => $selected_answer) {
         "INSERT INTO student_answers (attempt_id, question_id, selected_answer)
          VALUES ($attempt_id, $question_id, '$selected_answer')"
     );
+}
 
-    /* FETCH QUESTION DETAILS */
-    $qRes = mysqli_query(
-        $conn,
-        "SELECT question_type, marks
-         FROM questions
-         WHERE id=$question_id
-         LIMIT 1"
-    );
+/* Now fetch all student answers from database */
+$studentAnswersRes = mysqli_query(
+    $conn,
+    "SELECT sa.question_id, sa.selected_answer
+     FROM student_answers sa
+     WHERE sa.attempt_id=$attempt_id"
+);
 
-    if (mysqli_num_rows($qRes) === 0) continue;
+$studentAnswers = [];
+$debug_log = [];
+while ($row = mysqli_fetch_assoc($studentAnswersRes)) {
+    $studentAnswers[$row['question_id']] = $row['selected_answer'];
+    $debug_log[] = "Q{$row['question_id']}: '{$row['selected_answer']}'";
+}
 
-    $q = mysqli_fetch_assoc($qRes);
+/* Fetch all questions for this quiz */
+$allQuestionsRes = mysqli_query(
+    $conn,
+    "SELECT id, question_type, marks
+     FROM questions
+     WHERE quiz_id=$quiz_id"
+);
+
+while ($q = mysqli_fetch_assoc($allQuestionsRes)) {
+    $question_id = (int) $q['id'];
     $marks = (float) $q['marks'];
     $total_marks += $marks;
 
+    /* Skip descriptive questions - they need manual grading */
+    if ($q['question_type'] === 'descriptive') {
+        continue;
+    }
+
     $is_correct = false;
 
-    if ($q['question_type'] === 'descriptive') {
-    // Descriptive: save answer only, no auto score
-    continue;
-}
+    /* Check if student answered this question */
+    if (isset($studentAnswers[$question_id])) {
+        $selected_answer = trim($studentAnswers[$question_id]);
 
+        /* MCQ */
+        if ($q['question_type'] === 'mcq') {
+            $optRes = mysqli_query(
+                $conn,
+                "SELECT option_text
+                 FROM question_options
+                 WHERE question_id=$question_id
+                   AND is_correct=1
+                 LIMIT 1"
+            );
 
-    /* MCQ */
-    if ($q['question_type'] === 'mcq') {
+            $opt = mysqli_fetch_assoc($optRes);
 
-        $optRes = mysqli_query(
-            $conn,
-            "SELECT option_text
-             FROM question_options
-             WHERE question_id=$question_id
-               AND is_correct=1
-             LIMIT 1"
-        );
+            if ($opt && $selected_answer === $opt['option_text']) {
+                $is_correct = true;
+            }
 
-        $opt = mysqli_fetch_assoc($optRes);
+        } else {
+            /* TRUE/FALSE, ONE WORD, FILL BLANK */
+            $ansRes = mysqli_query(
+                $conn,
+                "SELECT correct_answer
+                 FROM question_answers
+                 WHERE question_id=$question_id
+                 LIMIT 1"
+            );
 
-        if ($opt && $selected_answer === $opt['option_text']) {
-            $is_correct = true;
-        }
+            $ans = mysqli_fetch_assoc($ansRes);
 
-    } else {
-        /* TRUE/FALSE, ONE WORD, FILL BLANK */
-
-        $ansRes = mysqli_query(
-            $conn,
-            "SELECT correct_answer
-             FROM question_answers
-             WHERE question_id=$question_id
-             LIMIT 1"
-        );
-
-        $ans = mysqli_fetch_assoc($ansRes);
-
-        if ($ans && strcasecmp(trim($ans['correct_answer']), $selected_answer) === 0) {
-            $is_correct = true;
+            if ($ans && strcasecmp(trim($ans['correct_answer']), $selected_answer) === 0) {
+                $is_correct = true;
+            }
         }
     }
 

@@ -56,6 +56,18 @@ $passMarks = (float) $data['pass_marks'];
 $quiz_id   = (int) $data['quiz_id'];
 
 /* =========================
+   CHECK FOR DESCRIPTIVE QUESTIONS
+   ========================= */
+$descriptiveRes = mysqli_query(
+    $conn,
+    "SELECT COUNT(*) AS descriptive_count
+     FROM questions
+     WHERE quiz_id = $quiz_id AND question_type = 'descriptive'"
+);
+$descriptiveRow = mysqli_fetch_assoc($descriptiveRes);
+$hasDescriptive = (int) $descriptiveRow['descriptive_count'] > 0;
+
+/* =========================
    TOTAL MARKS (FROM QUESTIONS)
    ========================= */
 $totalRes = mysqli_query(
@@ -172,23 +184,35 @@ body { background:#f0f2f5; padding:40px; }
         <?= htmlspecialchars($data['title']) ?>
     </div>
 
-    <div class="score-box">
-        <h1><?= $score ?> / <?= $totalMarks ?></h1>
+    <?php if ($hasDescriptive): ?>
+        <div class="score-box" style="background:#fff3cd; border-left:4px solid #ffc107;">
+            <p style="font-size:16px; color:#856404; margin:0;">
+                <i class="fas fa-clock"></i> <strong>Pending Evaluation</strong>
+            </p>
+            <p style="font-size:14px; color:#856404; margin-top:10px;">
+                Your quiz contains questions that require manual evaluation by the teacher. 
+                Your final score will be displayed once the teacher has reviewed and marked your answers.
+            </p>
+        </div>
+    <?php else: ?>
+        <div class="score-box">
+            <h1><?= $score ?> / <?= $totalMarks ?></h1>
 
-        <p>Your Score</p>
-    </div>
+            <p>Your Score</p>
+        </div>
 
-    <div class="status">
-        <?= $passed ? 'Test Passed ✅' : 'Test Failed ❌' ?>
-    </div>
+        <div class="status">
+            <?= $passed ? 'Test Passed ✅' : 'Test Failed ❌' ?>
+        </div>
 
-    <div class="message">
-        <?php if ($passed): ?>
-            🎊 Congratulations! You have successfully passed this quiz. Keep up the great work!
-        <?php else: ?>
-            ⚠️ Don’t worry! You did not meet the passing marks this time. Review the topics and try again.
-        <?php endif; ?>
-    </div>
+        <div class="message">
+            <?php if ($passed): ?>
+                🎊 Congratulations! You have successfully passed this quiz. Keep up the great work!
+            <?php else: ?>
+                ⚠️ Don't worry! You did not meet the passing marks this time. Review the topics and try again.
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <a href="scheduled_quizzes_student.php" class="btn">
         ← Back to Dashboard

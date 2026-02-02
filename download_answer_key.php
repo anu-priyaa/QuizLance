@@ -35,16 +35,17 @@ $studentRow  = mysqli_fetch_assoc($studentRes);
 $student_name = $studentRow['name'] ?? 'Student';
 
 /* ===============================
-   FETCH QUIZ TITLE
+   FETCH QUIZ TITLE AND CREATED DATE
    =============================== */
 $quizRes = mysqli_query($conn, "
-    SELECT title 
+    SELECT title, created_at
     FROM quizzes 
     WHERE id = $quiz_id 
     LIMIT 1
 ");
 $quizRow   = mysqli_fetch_assoc($quizRes);
 $quiz_title = $quizRow['title'] ?? 'Quiz';
+$quiz_created_at = $quizRow['created_at'] ?? date('Y-m-d H:i:s');
 
 /* ===============================
    GET ATTEMPT ID (SUBMITTED ONLY)
@@ -116,8 +117,8 @@ $pdf->Cell(0, 8, $student_name, 0, 1);
 $pdf->Cell(40, 8, 'Quiz Title:', 0, 0);
 $pdf->Cell(0, 8, $quiz_title, 0, 1);
 
-$pdf->Cell(40, 8, 'Generated On:', 0, 0);
-$pdf->Cell(0, 8, date('d M Y, h:i A'), 0, 1);
+$pdf->Cell(40, 8, 'Created On:', 0, 0);
+$pdf->Cell(0, 8, date('d M Y, h:i A', strtotime($quiz_created_at)), 0, 1);
 
 $pdf->Ln(6);
 

@@ -31,8 +31,20 @@ if (mysqli_num_rows($qres) === 0) {
 
 $quiz = mysqli_fetch_assoc($qres);
 
-// SHOW RULES ONLY ON FIRST LOAD
-if (!isset($_POST['start_quiz'])) {
+/* ===============================
+   CHECK IF QUIZ ALREADY STARTED
+   =============================== */
+$attemptRes = mysqli_query(
+    $conn,
+    "SELECT id FROM quiz_attempts 
+     WHERE quiz_id=$quiz_id 
+     AND student_id=$student_id"
+);
+
+$quizAlreadyStarted = mysqli_num_rows($attemptRes) > 0;
+
+// SHOW RULES ONLY ON FIRST LOAD (when quiz hasn't been started yet)
+if (!$quizAlreadyStarted && !isset($_POST['start_quiz'])) {
 ?>
 <!DOCTYPE html>
 <html>
@@ -205,6 +217,8 @@ if ($currentIndex >= $totalQuestions) {
 
 $q = $questionList[$currentIndex];
 
+$questionTime = (int) ($q['time_limit'] ?? 0);
+
 
 ?>
 <!DOCTYPE html>
@@ -265,22 +279,38 @@ body {
 
 <body>
 
+<script>
+let isSubmitting = false;
+let tabViolationLocked = false; // 🔒 NEW
+</script>
+
+
+
 <div class="quiz-header">
     <h2><?= htmlspecialchars($quiz['title']) ?></h2>
+    <?php if ($questionTime > 0): ?>
+<div class="timer">
+    Question Time: <span id="qTimer"><?= $questionTime ?></span>s
+</div>
+<?php endif; ?>
+
     <div class="timer" id="timer">Loading...</div>
 </div>
 
-<form method="POST" action="submit_quiz.php">
+<form method="POST" action="save_answer.php">
+
+
 
 <input type="hidden" name="quiz_id" value="<?= $quiz_id ?>">
 <input type="hidden" name="attempt_id" value="<?= $attempt_id ?>">
+<input type="hidden" name="next_q" value="<?= $currentIndex + 1 ?>">
 
 <div class="card">
 
 <?php
-$qno = 1;
-while ($q = mysqli_fetch_assoc($questions)):
+$qno = $currentIndex + 1;
 ?>
+
 
 <div class="question">
     <h4><?= $qno ?>. <?= htmlspecialchars($q['question_text']) ?></h4>
@@ -358,12 +388,6 @@ while ($q = mysqli_fetch_assoc($questions)):
 
 </div>
 
-
-<?php
-$qno++;
-endwhile;
-?>
-
 <button class="btn">Submit Quiz</button>
 
 </div>
@@ -380,110 +404,101 @@ let interval = setInterval(() => {
 
     if (remaining <= 0) {
         clearInterval(interval);
-        document.forms[0].submit();
+        isSubmitting = true;
+document.forms[0].submit();
+
     }
     remaining--;
 }, 1000);
 </script>
 
 <script>
+// Tab-switch / focus detection for anti-cheating
+console.log('Tab-detection script loaded');
 let violationCount = 0;
-const MAX_VIOLATIONS = 2;
+const MAX_VIOLATIONS = 3;
+let isSubmitting = false;
+let lastViolationTime = 0;
+const VIOLATION_COOLDOWN = 800; // ms cooldown between violations
 
-document.addEventListener("visibilitychange", function () {
-    if (document.hidden) {
-        violationCount++;
-        updateViolationBox(); // 🔹 ADD THIS LINE
+function updateViolationBox() {
+    const box = document.getElementById("violationBox");
+    if (box) box.innerText = "Violations: " + violationCount + " / " + MAX_VIOLATIONS;
+}
 
+function registerViolation(source) {
+    if (isSubmitting) return;
+    const now = Date.now();
+    if (now - lastViolationTime < VIOLATION_COOLDOWN) return; // debounce
+    lastViolationTime = now;
+    violationCount++;
+    updateViolationBox();
+    console.log('Violation #' + violationCount + ' from ' + source);
+
+    try {
         alert(
-            "⚠ Warning!\n" +
-            "Tab switching is not allowed.\n" +
+            "⚠ Violation detected!\n\n" +
+            "You switched away from the quiz (" + source + ").\n" +
             "Violation: " + violationCount + " / " + MAX_VIOLATIONS
         );
-
-        if (violationCount >= MAX_VIOLATIONS) {
-            alert("Quiz auto-submitted due to multiple violations.");
-            document.forms[0].submit();
-        }
+    } catch (e) {
+        console.log('Alert blocked or unavailable');
     }
-});
-</script>
 
+    if (violationCount >= MAX_VIOLATIONS) {
+        console.log('Max violations reached - submitting');
+        try { alert('Quiz auto-submitted due to multiple violations.'); } catch(e){}
+        isSubmitting = true;
+        // submit if form exists
+        if (document.forms && document.forms[0]) document.forms[0].submit();
+    }
+}
 
-<script>
-// Disable right-click
-document.addEventListener("contextmenu", e => e.preventDefault());
-
-// Disable copy, paste, cut
-document.addEventListener("copy", e => e.preventDefault());
-document.addEventListener("paste", e => e.preventDefault());
-document.addEventListener("cut", e => e.preventDefault());
-
-// Disable keyboard shortcuts
-document.addEventListener("keydown", function (e) {
-    if (
-        (e.ctrlKey && ['c','v','x','a','u'].includes(e.key.toLowerCase())) ||
-        e.key === "PrintScreen"
-    ) {
-        e.preventDefault();
+// visibilitychange: most reliable for tab switches
+document.addEventListener('visibilitychange', function (e) {
+    console.log('visibilitychange event, hidden=', document.hidden);
+    if (document.hidden) {
+        registerViolation('visibilitychange');
     }
 });
 
-// Disable text selection
-document.addEventListener("selectstart", e => e.preventDefault());
+// blur/focus: catches window switching (Alt+Tab)
+window.addEventListener('blur', function () {
+    console.log('window blur event');
+    registerViolation('window.blur');
+});
+
+window.addEventListener('focus', function () {
+    console.log('window focus event');
+});
+
+// polling fallback: check document.hasFocus every second - useful in some browsers
+let lastFocusState = document.hasFocus();
+setInterval(function(){
+    const focused = document.hasFocus();
+    if (focused !== lastFocusState) {
+        console.log('hasFocus changed:', focused);
+        if (!focused) registerViolation('hasFocus-poll');
+        lastFocusState = focused;
+    }
+}, 1000);
 </script>
 
-<div id="violationBox" style="position:fixed;bottom:10px;right:10px;
-background:#5A0E24;color:white;padding:6px 10px;border-radius:5px;font-size:12px;">
+
+<div id="violationBox" style="
+position:fixed;
+bottom:10px;
+right:10px;
+background:#5A0E24;
+color:white;
+padding:6px 12px;
+border-radius:6px;
+font-size:13px;
+z-index:9999;
+">
 Violations: 0 / 3
 </div>
 
-<script>
-function updateViolationBox() {
-    document.getElementById("violationBox").innerText =
-        "Violations: " + violationCount + " / " + MAX_VIOLATIONS;
-}
-</script>
-
-<script>
-// Disable right-click
-document.addEventListener("contextmenu", function (e) {
-    e.preventDefault();
-});
-
-// Disable copy, paste, cut
-document.addEventListener("copy", function (e) {
-    e.preventDefault();
-});
-document.addEventListener("paste", function (e) {
-    e.preventDefault();
-});
-document.addEventListener("cut", function (e) {
-    e.preventDefault();
-});
-
-// Disable text selection
-document.addEventListener("selectstart", function (e) {
-    e.preventDefault();
-});
-
-// Disable common keyboard shortcuts
-document.addEventListener("keydown", function (e) {
-
-    // Ctrl + C, V, X, A, U
-    if (
-        e.ctrlKey &&
-        ['c','v','x','a','u'].includes(e.key.toLowerCase())
-    ) {
-        e.preventDefault();
-    }
-
-    // Disable Print Screen
-    if (e.key === "PrintScreen") {
-        e.preventDefault();
-    }
-});
-</script>
 
 </body>
 </html>
