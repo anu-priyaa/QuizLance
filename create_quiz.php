@@ -44,10 +44,28 @@ $imgSrc = $teacher['profile_pic']
    ========================= */
 $classes = mysqli_query(
     $conn,
-    "SELECT id, class_name
-     FROM Classes
-     WHERE teacher_id=$teacher_id AND status='active'"
+    "SELECT DISTINCT c.id, c.class_name
+     FROM Classes c
+     LEFT JOIN Class_SubTeachers s
+     ON c.id = s.class_id
+     WHERE c.status='active'
+     AND (
+         c.teacher_id=$teacher_id
+         OR s.teacher_id=$teacher_id
+     )"
 );
+
+
+/* =========================
+   FETCH PREVIOUS QUIZZES
+   ========================= */
+$previous_quizzes = mysqli_query($conn,"
+    SELECT id, title
+    FROM quizzes
+    WHERE teacher_id=$teacher_id
+    ORDER BY id DESC
+");
+
 
 
 /* =========================
@@ -83,31 +101,240 @@ if (isset($_POST['create_quiz'])) {
 
         $rules_text = mysqli_real_escape_string($conn, $quiz_rules);
 
-        mysqli_query(
-            $conn,
-            "INSERT INTO quizzes
-            (
-                teacher_id, class_id, title, description,
-                start_time, end_time, duration,
-                pass_marks, negative_marks,
-                status, quiz_rules
-            )
-            VALUES
-            (
-                $teacher_id, $class_id, '$title', '$description',
-                '$start_time', '$end_time', $duration,
-                $pass_marks, $negative_marks,
-                'draft', '$rules_text'
-            )"
-        );
+        /* VERIFY CLASS ACCESS */
+$verify = mysqli_query(
+    $conn,
+    "SELECT c.id FROM Classes c
+     LEFT JOIN Class_SubTeachers s
+     ON c.id = s.class_id
+     WHERE c.id=$class_id
+     AND (
+         c.teacher_id=$teacher_id
+         OR s.teacher_id=$teacher_id
+     )"
+);
 
-        unset($_SESSION['quiz_rules']);
-        $quiz_id = mysqli_insert_id($conn);
+if (mysqli_num_rows($verify) === 0) {
+    $error = "You are not authorized to create quiz for this class";
+} else {
 
-        header("Location: add_questions.php?quiz_id=$quiz_id");
-        exit();
+    mysqli_query(
+        $conn,
+        "INSERT INTO quizzes
+        (
+            teacher_id, class_id, title, description,
+            start_time, end_time, duration,
+            pass_marks, negative_marks,
+            status, quiz_rules
+        )
+        VALUES
+        (
+            $teacher_id, $class_id, '$title', '$description',
+            '$start_time', '$end_time', $duration,
+            $pass_marks, $negative_marks,
+            'draft', '$rules_text'
+        )"
+    );
+
+    unset($_SESSION['quiz_rules']);
+    $quiz_id = mysqli_insert_id($conn);
+
+}
+if(isset($quiz_id)){
+
+$assign_type = $_POST['assign_type'];
+
+if ($assign_type === 'all') {
+
+    $students = mysqli_query($conn,"
+        SELECT student_id
+        FROM class_students
+        WHERE class_id=$class_id
+    ");
+
+    while($row = mysqli_fetch_assoc($students)){
+        $sid = $row['student_id'];
+
+        mysqli_query($conn,"
+            INSERT INTO quiz_assignments (quiz_id, student_id)
+            VALUES ($quiz_id, $sid)
+        ");
+    }
+
+}
+else if ($assign_type === 'selected') {
+
+    // Check if CSV file was uploaded
+    if (isset($_FILES['student_csv']) && $_FILES['student_csv']['error'] === UPLOAD_ERR_OK) {
+        
+        $csv_file = $_FILES['student_csv']['tmp_name'];
+        $file_handle = fopen($csv_file, 'r');
+        $assigned_count = 0;
+        
+        // Read CSV file
+        while (($row = fgetcsv($file_handle, 1000, ",")) !== FALSE) {
+            
+            // Get the email from the CSV (assumes first column is email)
+            $email = trim($row[0]);
+            
+            if (empty($email)) {
+                continue;
+            }
+            
+            // Find student by email
+            $student_res = mysqli_query($conn, "SELECT id FROM Students WHERE email = '$email' LIMIT 1");
+            
+            if (mysqli_num_rows($student_res) > 0) {
+                $student = mysqli_fetch_assoc($student_res);
+                $sid = $student['id'];
+                
+                // Assign quiz to this student
+                mysqli_query($conn, "INSERT INTO quiz_assignments (quiz_id, student_id) VALUES ($quiz_id, $sid)");
+                $assigned_count++;
+            }
+        }
+        
+        fclose($file_handle);
+        
+        if ($assigned_count === 0) {
+            $error = "No students found with the emails provided in the CSV file.";
+        }
+
+    } else if (!empty($_POST['students'])) {
+        
+        // Fallback: use checkbox selection if no CSV uploaded
+        foreach($_POST['students'] as $sid){
+            $sid = (int)$sid;
+
+            mysqli_query($conn,"
+                INSERT INTO quiz_assignments (quiz_id, student_id)
+                VALUES ($quiz_id, $sid)
+            ");
+        }
+
+    } else {
+        $error = "Please upload a CSV file or select students manually.";
     }
 }
+
+}
+
+/* =========================
+   REUSE QUESTIONS
+   ========================= */
+
+/* =========================
+   REUSE QUESTIONS
+   ========================= */
+
+if (isset($_POST['reuse_quiz']) && $_POST['reuse_quiz'] === 'yes' && !empty($_POST['old_quiz_id'])) {
+
+    $old_quiz_id = (int)$_POST['old_quiz_id'];
+
+    $questions = mysqli_query($conn,"
+        SELECT *
+        FROM questions
+        WHERE quiz_id=$old_quiz_id
+    ");
+
+    while($q = mysqli_fetch_assoc($questions)){
+
+        $old_question_id = $q['id'];
+
+        unset($q['id']);
+        $q['quiz_id'] = $quiz_id;
+
+        $columns = array_keys($q);
+
+        $values = array_map(function($v) use ($conn){
+            return "'" . mysqli_real_escape_string($conn,$v) . "'";
+        }, array_values($q));
+
+        $col_string = implode(",", $columns);
+        $val_string = implode(",", $values);
+
+        mysqli_query($conn,"
+            INSERT INTO questions ($col_string)
+            VALUES ($val_string)
+        ");
+
+        $new_question_id = mysqli_insert_id($conn);
+
+
+        /* COPY OPTIONS */
+
+        $options = mysqli_query($conn,"
+            SELECT *
+            FROM question_options
+            WHERE question_id=$old_question_id
+        ");
+
+        while($opt = mysqli_fetch_assoc($options)){
+
+            unset($opt['id']);
+            $opt['question_id'] = $new_question_id;
+
+            $columns = array_keys($opt);
+            $values = array_map(function($v) use ($conn){
+                return "'" . mysqli_real_escape_string($conn,$v) . "'";
+            }, array_values($opt));
+
+            $col_string = implode(",", $columns);
+            $val_string = implode(",", $values);
+
+            mysqli_query($conn,"
+                INSERT INTO question_options ($col_string)
+                VALUES ($val_string)
+            ");
+        }
+
+
+        /* COPY ANSWERS */
+
+        $answers = mysqli_query($conn,"
+            SELECT *
+            FROM question_answers
+            WHERE question_id=$old_question_id
+        ");
+
+        while($ans = mysqli_fetch_assoc($answers)){
+
+            unset($ans['id']);
+            $ans['question_id'] = $new_question_id;
+
+            $columns = array_keys($ans);
+            $values = array_map(function($v) use ($conn){
+                return "'" . mysqli_real_escape_string($conn,$v) . "'";
+            }, array_values($ans));
+
+            $col_string = implode(",", $columns);
+            $val_string = implode(",", $values);
+
+            mysqli_query($conn,"
+                INSERT INTO question_answers ($col_string)
+                VALUES ($val_string)
+            ");
+        }
+
+    }
+}
+
+
+/* =========================
+   REDIRECT
+   ========================= */
+
+if (isset($_POST['reuse_quiz']) && $_POST['reuse_quiz'] === 'yes') {
+    header("Location: teacher_dashboard.php?msg=quiz_created");
+} else {
+    header("Location: add_questions.php?quiz_id=$quiz_id");
+}
+
+exit();
+}
+}
+
+        
 
 ?>
 
@@ -269,7 +496,7 @@ textarea{resize:vertical}
         <div class="card">
             <h2>Create New Quiz</h2>
 
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
 
                 <div class="form-group">
                     <label>Quiz Title *</label>
@@ -292,6 +519,92 @@ textarea{resize:vertical}
                         <?php endwhile; ?>
                     </select>
                 </div>
+
+                <div class="form-group">
+    <label>Reuse Question Paper?</label>
+    <select name="reuse_quiz" id="reuseQuiz" onchange="toggleReuse()">
+        <option value="no">No (Create New Questions)</option>
+        <option value="yes">Yes (Reuse Existing Quiz)</option>
+    </select>
+</div>
+
+<div class="form-group" id="reuseQuizSelect" style="display:none;">
+    <label>Select Previous Quiz</label>
+    <select name="old_quiz_id">
+        <option value="">-- Select Quiz --</option>
+        <?php while($pq = mysqli_fetch_assoc($previous_quizzes)): ?>
+            <option value="<?= $pq['id'] ?>">
+                <?= htmlspecialchars($pq['title']) ?>
+            </option>
+        <?php endwhile; ?>
+    </select>
+</div>
+
+    <div class="form-group">
+    <label>Assignment Type *</label>
+    <select name="assign_type" id="assignType" onchange="toggleStudentSelection()" required>
+        <option value="all">Assign to All Students</option>
+        <option value="selected">Assign to Selected Students</option>
+    </select>
+</div>
+
+
+<!-- STUDENT SELECTION (Hidden by default) -->
+<div class="form-group" id="studentSelection" style="display:none;">
+    
+    <div style="margin-bottom: 20px; padding: 15px; background: #f0f2f5; border-radius: 8px; border-left: 4px solid #5A0E24;">
+        <h4 style="margin-bottom: 10px; color: #5A0E24;">Assign Students by CSV Upload</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
+            Upload a CSV file with student email addresses (one email per line)
+        </p>
+        <input type="file" name="student_csv" accept=".csv" style="padding: 8px; border: 2px solid #ddd; border-radius: 5px; width: 100%; cursor: pointer;">
+        <p style="font-size: 12px; color: #999; margin-top: 8px;">
+            <i class="fas fa-info-circle"></i> CSV Format: First column should contain student emails
+        </p>
+    </div>
+
+    <div style="margin-bottom: 15px; text-align: center; color: #999;">
+        <strong>OR</strong>
+    </div>
+
+    <div>
+        <h4 style="margin-bottom: 10px; color: #5A0E24;">Select Students Manually</h4>
+        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: white;">
+            <?php
+            // Reset student query for manual selection
+            $allStudents = mysqli_query($conn,"
+    SELECT s.id, s.name, s.email
+    FROM class_students cs
+    JOIN Students s ON cs.student_id = s.id
+    WHERE cs.class_id IN (
+        SELECT c.id
+        FROM Classes c
+        LEFT JOIN Class_SubTeachers st
+        ON c.id = st.class_id
+        WHERE c.teacher_id=$teacher_id
+        OR st.teacher_id=$teacher_id
+    )
+    ORDER BY s.name ASC
+");
+
+            if (mysqli_num_rows($allStudents) > 0) {
+                while($stu = mysqli_fetch_assoc($allStudents)):
+                ?>
+                    <label style="display: block; padding: 8px; cursor: pointer; border-radius: 4px;">
+                        <input type="checkbox" name="students[]" value="<?= $stu['id'] ?>" style="cursor: pointer;">
+                        <strong><?= htmlspecialchars($stu['name']) ?></strong> 
+                        <small style="color: #999;"><?= htmlspecialchars($stu['email']) ?></small>
+                    </label>
+                <?php 
+                endwhile;
+            } else {
+                echo '<p style="color: #999; text-align: center;">No students in your classes</p>';
+            }
+            ?>
+        </div>
+    </div>
+</div>
+
 
                 <div class="form-group">
                     <label>Start Time *</label>
@@ -345,6 +658,32 @@ document.addEventListener('click',e=>{
     if(p && !p.contains(e.target))
         document.getElementById('profileDropdown').style.display='none';
 });
+
+
+function toggleStudentSelection() {
+    const selected = document.getElementById('assignType').value;
+    const studentDiv = document.getElementById('studentSelection');
+
+    if (selected === 'selected') {
+        studentDiv.style.display = 'block';
+    } else {
+        studentDiv.style.display = 'none';
+    }
+}
+
+
+function toggleReuse(){
+    const val = document.getElementById('reuseQuiz').value;
+    const box = document.getElementById('reuseQuizSelect');
+
+    if(val === 'yes'){
+        box.style.display = 'block';
+    }else{
+        box.style.display = 'none';
+    }
+}
+
+
 </script>
 
 </body>

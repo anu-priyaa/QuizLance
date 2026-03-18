@@ -22,6 +22,32 @@ $profile_pic  = $student['profile_pic'];
 $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
+
+    /* ===== FETCH PERFORMANCE DATA ===== */
+$quiz_names = [];
+$scores = [];
+
+$performance_query = "
+SELECT q.title, qa.total_marks, qa.submitted_at
+FROM quiz_attempts qa
+JOIN Quizzes q ON qa.quiz_id = q.id
+WHERE qa.student_id = $student_id
+AND qa.status = 'submitted'
+ORDER BY qa.submitted_at ASC
+";
+
+$performance_result = mysqli_query($conn, $performance_query);
+
+if ($performance_result) {
+    while ($row = mysqli_fetch_assoc($performance_result)) {
+
+    $date = date("d M Y", strtotime($row['submitted_at']));
+
+    $quiz_names[] = $row['title'] . " (" . $date . ")";
+    $scores[] = $row['total_marks'];
+}
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -254,6 +280,20 @@ body { background:#f0f2f5; }
     object-fit:cover;
 }
 
+.performance-section {
+    margin: 40px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.chart-container {
+    width: 100%;
+    height: 400px;
+}
+
+
 .close-btn {
     position:absolute;
     top:10px;
@@ -315,7 +355,22 @@ body { background:#f0f2f5; }
     </div>
 
     <div class="dashboard-grid">
-        <a href="live_quizzes.php" class="menu-link">
+
+    <a href="sample_quizzes_student.php" class="menu-link">
+    <div class="menu-card">
+        <i class="fas fa-book-open"></i>
+        <h3>Sample Quizzes</h3>
+    </div>
+</a>
+
+
+    <a href="student_doubts.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-play-circle"></i>
+                <h3>Doubts</h3>
+            </div>
+        </a>
+        <a href="attempt_live_quizzes.php" class="menu-link">
             <div class="menu-card">
                 <i class="fas fa-play-circle"></i>
                 <h3>Live Quiz</h3>
@@ -342,6 +397,15 @@ body { background:#f0f2f5; }
                 <h3>Announcements</h3>
             </div>
         </a>
+
+</div>
+<div class="performance-section">
+    <h2>Overall Performance</h2>
+    <div class="chart-container">
+        <canvas id="performanceChart"></canvas>
+    </div>
+
+
     </div>
 </div>
 
@@ -386,5 +450,45 @@ function closeProfilePopup() {
 </script>
 
 <?php include 'includes/auto_logout.php'; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const quizNames = <?php echo json_encode($quiz_names); ?>;
+const scores = <?php echo json_encode($scores); ?>;
+
+const ctx = document.getElementById('performanceChart').getContext('2d');
+
+if (quizNames.length > 0) {
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: quizNames,
+            datasets: [{
+                label: 'Marks',
+                data: scores,
+                borderColor: '#7a0f22',
+                backgroundColor: 'rgba(122,15,34,0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+} else {
+    ctx.canvas.parentNode.innerHTML =
+        "<p style='text-align:center;color:gray;'>No quiz attempts yet.</p>";
+}
+</script>
+
+
 </body>
 </html>

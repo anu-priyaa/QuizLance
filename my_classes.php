@@ -15,7 +15,7 @@ $teacher_id = $_SESSION['user_id'];
 
 /* FETCH TEACHER INFO */
 $res = mysqli_query(
-    $conn,
+    $conn, 
     "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id"
 );
 $teacher = mysqli_fetch_assoc($res);
@@ -23,8 +23,8 @@ $teacher = mysqli_fetch_assoc($res);
 $teacher_name = $teacher['name'];
 $profile_pic  = $teacher['profile_pic'];
 
-$imgSrc = $profile_pic
-    ? htmlspecialchars($profile_pic) . '?t=' . time()
+$imgSrc = $profile_pic 
+    ? htmlspecialchars($profile_pic) . '?t=' . time() 
     : 'https://via.placeholder.com/85';
 
 /* CREATE CLASS */
@@ -35,8 +35,8 @@ if (isset($_POST['create_class'])) {
         $error = "Class name is required";
     } else {
         mysqli_query(
-            $conn,
-            "INSERT INTO Classes (teacher_id, class_name, status)
+            $conn, 
+            "INSERT INTO Classes (teacher_id, class_name, status) 
              VALUES ($teacher_id, '$class_name', 'active')"
         );
         $success = "Class created successfully";
@@ -48,21 +48,24 @@ if (isset($_POST['delete_class'])) {
     $class_id = (int) $_POST['class_id'];
 
     mysqli_query(
-        $conn,
-        "UPDATE Classes
-         SET status='deleted'
+        $conn, 
+        "UPDATE Classes 
+         SET status='deleted' 
          WHERE id=$class_id AND teacher_id=$teacher_id"
     );
 
     $success = "Class deleted successfully";
 }
 
-/* FETCH ACTIVE CLASSES */
+/* 🔥 UPDATED: FETCH ACTIVE CLASSES AND JOIN WITH THE SUB-TEACHER MAPPING TABLE */
 $classes = mysqli_query(
-    $conn,
-    "SELECT * FROM Classes
-     WHERE teacher_id=$teacher_id AND status='active'
-     ORDER BY id DESC"
+    $conn, 
+    "SELECT c.*, T.name AS sub_teacher_display_name 
+     FROM Classes c
+     LEFT JOIN class_subteachers cs ON c.id = cs.class_id
+     LEFT JOIN Teachers T ON cs.teacher_id = T.id
+     WHERE c.teacher_id=$teacher_id AND c.status='active' 
+     ORDER BY c.id DESC"
 );
 ?>
 <!DOCTYPE html>
@@ -79,278 +82,103 @@ body { background:#f0f2f5; }
 
 /* TOP BAR */
 .topbar {
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:60px;
-    background:#5A0E24;
-    color:white;
-    display:flex;
-    align-items:center;
-    padding:0 20px;
-    z-index:1001;
+    position:fixed; top:0; left:0; width:100%; height:60px;
+    background:#5A0E24; color:white; display:flex; align-items:center;
+    padding:0 20px; z-index:1001;
 }
 
-/* ===== TOP PROFILE MENU ===== */
-.top-profile {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    position: relative;
-}
+.top-profile { margin-left: auto; display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative; }
+.top-profile img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #5d9415; }
+.top-profile span { font-size: 14px; font-weight: 500; }
 
-.top-profile img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #5d9415;
-}
-
-.top-profile span {
-    font-size: 14px;
-    font-weight: 500;
-}
-
-/* DROPDOWN */
 .profile-dropdown {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 55px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    min-width: 180px;
-    overflow: hidden;
-    z-index: 3000;
+    display: none; position: absolute; right: 0; top: 55px;
+    background: white; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    min-width: 180px; overflow: hidden; z-index: 3000;
 }
+.profile-dropdown a { display: flex; align-items: center; gap: 10px; padding: 12px 15px; text-decoration: none; color: #333; font-size: 14px; }
+.profile-dropdown a:hover { background: #f2f2f2; }
 
-.profile-dropdown a {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 15px;
-    text-decoration: none;
-    color: #333;
-    font-size: 14px;
-}
-
-.profile-dropdown a:hover {
-    background: #f2f2f2;
-}
-
-.topbar i { font-size:24px; cursor:pointer; }
-
-/* SIDEBAR */
 .sidebar {
-    width:260px;
-    background:#5A0E24;
-    color:white;
-    display:flex;
-    flex-direction:column;
-    position:fixed;
-    top:60px;
-    left:0;
-    height:calc(100vh - 60px);
-    transition:0.3s ease;
-    z-index:1000;
+    width:260px; background:#5A0E24; color:white; display:flex; flex-direction:column;
+    position:fixed; top:60px; left:0; height:calc(100vh - 60px);
+    transition:0.3s ease; z-index:1000;
 }
 .sidebar.collapsed { transform:translateX(-100%); }
 .sidebar.no-transition { transition:none !important; }
 
-.sidebar-profile {
-    text-align:center;
-    padding:25px 15px;
-    border-bottom:1px solid rgba(255,255,255,0.15);
-    cursor:pointer;
-}
-.sidebar-profile img {
-    width:85px;
-    height:85px;
-    border-radius:50%;
-    object-fit:cover;
-    border:3px solid #5d9415;
-}
+.sidebar-profile { text-align:center; padding:25px 15px; border-bottom:1px solid rgba(255,255,255,0.15); cursor:pointer; }
+.sidebar-profile img { width:85px; height:85px; border-radius:50%; object-fit:cover; border:3px solid #5d9415; }
 .sidebar-profile h3 { margin-top:10px; font-size:16px; }
 
-.sidebar a {
-    padding:15px 25px;
-    text-decoration:none;
-    color:#d1d1d1;
-    display:flex;
-    align-items:center;
-}
+.sidebar a { padding:15px 25px; text-decoration:none; color:#d1d1d1; display:flex; align-items:center; }
 .sidebar a i { margin-right:15px; width:20px; }
-.sidebar a:hover,
-.sidebar a.active { background:#861434; color:white; }
+.sidebar a:hover, .sidebar a.active { background:#861434; color:white; }
 
-.logout {
-    margin-top:auto;
-    border-top:1px solid rgba(255,255,255,0.15);
-}
-
-/* MAIN CONTENT */
-.main-content {
-    margin-left:260px;
-    padding:90px 40px 40px;
-    transition:0.3s ease;
-}
+.main-content { margin-left:260px; padding:90px 40px 40px; transition:0.3s ease; }
 .main-content.full { margin-left:0; }
 
-/* PAGE CARD */
-.page-card {
-    background:white;
-    padding:30px;
-    border-radius:15px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.05);
-    border-left:5px solid #5d9415;
-    max-width:520px;
-    margin-bottom:30px;
-}
+.page-card { background:white; padding:30px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-left:5px solid #5d9415; max-width:520px; margin-bottom:30px; }
 .page-card h1 { color:#5A0E24; margin-bottom:10px; }
-.page-card p { margin-bottom:25px; color:#555; }
 
-/* FORM */
-input {
-    width:100%;
-    padding:12px;
-    border-radius:6px;
-    border:1px solid #ccc;
-    margin-bottom:20px;
-}
-button {
-    background:#5d9415;
-    color:white;
-    padding:12px 18px;
-    border:none;
-    border-radius:6px;
-    font-weight:bold;
-    cursor:pointer;
-}
-button:hover {
-    background:#4e7d12;
-    transform:translateY(-2px);
-}
+input { width:100%; padding:12px; border-radius:6px; border:1px solid #ccc; margin-bottom:20px; }
+button { background:#5d9415; color:white; padding:12px 18px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
+button:hover { background:#4e7d12; transform:translateY(-2px); }
 
-/* CLASS LIST */
-.class-list {
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
-    gap:20px;
-}
-.class-card {
-    background:white;
-    padding:22px;
-    border-radius:12px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.08);
-    border-left:5px solid #5d9415;
-}
+.class-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:20px; }
+.class-card { background:white; padding:22px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08); border-left:5px solid #5d9415; }
 .class-card h3 { color:#5A0E24; margin-bottom:6px; }
-.class-card small { color:#777; }
+.class-card p.teacher-name { color: #5d9415; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+.class-card small { color:#777; display: block; margin-bottom: 10px; }
 
-.delete-btn {
-    margin-top:12px;
-    background:#b30000;
-}
+.delete-btn { margin-top:12px; background:#b30000; width: 100%; }
 .delete-btn:hover { background:#8a0000; }
 
 .alert-success { color:green; font-weight:bold; }
 .alert-error { color:red; font-weight:bold; }
 
-/* PROFILE POPUP */
-.profile-popup {
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.5);
-    z-index:2000;
-    justify-content:center;
-    align-items:center;
-}
-.profile-popup-content {
-    background:white;
-    padding:30px;
-    border-radius:15px;
-    text-align:center;
-    position:relative;
-}
-.profile-popup-content img {
-    width:200px;
-    height:200px;
-    border-radius:50%;
-    border:4px solid #5d9415;
-
-    object-fit: cover;      /* 🔥 MOST IMPORTANT */
-    object-position: center;
-    display: block;
-}
-
-.close-btn {
-    position:absolute;
-    top:10px;
-    right:14px;
-    font-size:22px;
-    cursor:pointer;
-}
+.profile-popup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center; }
+.profile-popup-content { background:white; padding:30px; border-radius:15px; text-align:center; position:relative; }
+.profile-popup-content img { width:200px; height:200px; border-radius:50%; border:4px solid #5d9415; object-fit: cover; display: block; }
+.close-btn { position:absolute; top:10px; right:14px; font-size:22px; cursor:pointer; }
 </style>
 </head>
 
 <body>
 
-<!-- TOP BAR -->
 <div class="topbar">
-    <i class="fas fa-bars" id="menuToggle"></i>
-
-    <!-- PROFILE ICON (TOP RIGHT) -->
+    <i class="fas fa-bars" id="menuToggle" style="cursor:pointer; font-size:20px;"></i>
     <div class="top-profile" onclick="toggleProfileMenu()">
         <img src="<?= $profile_pic ? $profile_pic . '?t=' . time() : 'https://via.placeholder.com/36' ?>">
         <span><?= htmlspecialchars($teacher_name) ?></span>
-
         <div class="profile-dropdown" id="profileDropdown">
-            <a href="profile_teacher.php">
-                <i class="fas fa-user-edit"></i> Edit Profile
-            </a>
-            <a href="logout.php">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+            <a href="profile_teacher.php"><i class="fas fa-user-edit"></i> Edit Profile</a>
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 </div>
 
-
-<!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
         <h3><?= htmlspecialchars($teacher_name) ?></h3>
     </div>
-
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php" class="active"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
-    <a href="archived_classes.php">
-        <i class="fas fa-archive"></i> Archived Classes
-    </a>
+    <a href="manage_classes.php"><i class="fas fa-tasks"></i> Manage Class</a>
+    <a href="archived_classes.php"><i class="fas fa-archive"></i> Archived Classes</a>
     <a href="view_students.php"><i class="fas fa-eye"></i> View Students</a>
     <a href="view_attendance_teacher.php"><i class="fas fa-clipboard-list"></i> Attendance</a>
 </div>
 
-<!-- MAIN CONTENT -->
 <div class="main-content full" id="mainContent">
-
     <div class="page-card">
         <h1>Create Class</h1>
         <p>Create a new class. Students will be added by you.</p>
-
         <form method="POST">
             <input type="text" name="class_name" placeholder="Enter class name" required>
             <button name="create_class">Create Class</button>
         </form>
-
         <?php if (isset($success)) echo "<p class='alert-success'>$success</p>"; ?>
         <?php if (isset($error)) echo "<p class='alert-error'>$error</p>"; ?>
     </div>
@@ -361,13 +189,17 @@ button:hover {
         <?php while ($row = mysqli_fetch_assoc($classes)): ?>
             <div class="class-card">
                 <h3><?= htmlspecialchars($row['class_name']) ?></h3>
+                
+                <p class="teacher-name">
+                    <i class="fas fa-user-tag"></i> 
+                    Sub-Teacher: <?= $row['sub_teacher_display_name'] ? htmlspecialchars($row['sub_teacher_display_name']) : 'None' ?>
+                </p>
+
                 <small>
-                    Created by you on
-                    <?= date("d M Y, h:i A", strtotime($row['created_at'])) ?>
+                    Created on <?= date("d M Y", strtotime($row['created_at'])) ?>
                 </small>
 
-                <form method="POST"
-                      onsubmit="return confirm('Do you really want to delete this class?');">
+                <form method="POST" onsubmit="return confirm('Do you really want to delete this class?');">
                     <input type="hidden" name="class_id" value="<?= $row['id'] ?>">
                     <button class="delete-btn" name="delete_class">
                         <i class="fas fa-trash"></i> Delete
@@ -376,10 +208,8 @@ button:hover {
             </div>
         <?php endwhile; ?>
     </div>
-
 </div>
 
-<!-- PROFILE POPUP -->
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
@@ -389,11 +219,10 @@ button:hover {
 </div>
 
 <script>
-const menuToggle  = document.getElementById('menuToggle');
-const sidebar     = document.getElementById('sidebar');
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
 const mainContent = document.getElementById('mainContent');
 
-/* restore sidebar state */
 window.addEventListener('DOMContentLoaded', () => {
     const state = sessionStorage.getItem('sidebar');
     if (state === 'open') {
@@ -403,33 +232,20 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => sidebar.classList.remove('no-transition'), 50);
 });
 
-/* toggle sidebar */
 menuToggle.onclick = () => {
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('full');
-
-    sessionStorage.setItem(
-        'sidebar',
-        sidebar.classList.contains('collapsed') ? 'closed' : 'open'
-    );
+    sessionStorage.setItem('sidebar', sidebar.classList.contains('collapsed') ? 'closed' : 'open');
 };
 
-/* PROFILE POPUP */
-function openProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'flex';
-}
-function closeProfilePopup() {
-    document.getElementById('profilePopup').style.display = 'none';
-}
-</script>
+function openProfilePopup() { document.getElementById('profilePopup').style.display = 'flex'; }
+function closeProfilePopup() { document.getElementById('profilePopup').style.display = 'none'; }
 
-<script>
 function toggleProfileMenu() {
     const menu = document.getElementById('profileDropdown');
     menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
 
-/* Close dropdown when clicking outside */
 document.addEventListener('click', function (e) {
     const profile = document.querySelector('.top-profile');
     if (profile && !profile.contains(e.target)) {
@@ -438,7 +254,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 
-<?php include 'includes/auto_logout.php'; ?>
+<?php if(file_exists('includes/auto_logout.php')) include 'includes/auto_logout.php'; ?>
 
 </body>
 </html>

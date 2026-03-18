@@ -115,6 +115,43 @@ if (isset($_POST['upload_csv'])) {
         $success = "$count students added successfully via CSV";
     }
 }
+
+/* ===== ADD SUB TEACHER ===== */
+if (isset($_POST['add_sub_teacher'])) {
+
+    $class_id = (int) $_POST['class_id'];
+    $sub_teacher_id = (int) $_POST['sub_teacher_id'];
+
+    // Verify logged-in teacher owns this class
+    $verify = mysqli_query(
+        $conn,
+        "SELECT id FROM Classes 
+         WHERE id=$class_id AND teacher_id=$teacher_id"
+    );
+
+    if (mysqli_num_rows($verify) === 0) {
+        $error = "You are not authorized to modify this class";
+    } else {
+
+        $check = mysqli_query(
+            $conn,
+            "SELECT id FROM Class_SubTeachers
+             WHERE class_id=$class_id AND teacher_id=$sub_teacher_id"
+        );
+
+        if (mysqli_num_rows($check) > 0) {
+            $error = "Teacher already added to this class";
+        } else {
+            mysqli_query(
+                $conn,
+                "INSERT INTO Class_SubTeachers (class_id, teacher_id)
+                 VALUES ($class_id, $sub_teacher_id)"
+            );
+            $success = "Sub Teacher added successfully!";
+        }
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -437,6 +474,44 @@ button:hover {
             <button name="upload_csv">Upload CSV</button>
         </form>
     </div>
+
+    <div class="page-card">
+    <h1>Add Sub Teacher</h1>
+    <p>Assign another teacher to manage your class.</p>
+
+    <form method="POST">
+        <select name="class_id" required>
+            <option value="">-- Select Class --</option>
+            <?php
+            mysqli_data_seek($class_res, 0);
+            while ($c = mysqli_fetch_assoc($class_res)):
+            ?>
+                <option value="<?= $c['id'] ?>">
+                    <?= htmlspecialchars($c['class_name']) ?>
+                </option>
+            <?php endwhile; ?>
+        </select>
+
+        <select name="sub_teacher_id" required>
+            <option value="">-- Select Teacher --</option>
+            <?php
+            $teachers = mysqli_query(
+                $conn,
+                "SELECT id, name FROM Teachers 
+                 WHERE id != $teacher_id"
+            );
+            while ($t = mysqli_fetch_assoc($teachers)):
+            ?>
+                <option value="<?= $t['id'] ?>">
+                    <?= htmlspecialchars($t['name']) ?>
+                </option>
+            <?php endwhile; ?>
+        </select>
+
+        <button name="add_sub_teacher">Add Sub Teacher</button>
+    </form>
+</div>
+
 
 </div>
 

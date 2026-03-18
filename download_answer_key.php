@@ -1,16 +1,15 @@
 <?php
 session_start();
+// Force PHP to use IST
+date_default_timezone_set('Asia/Kolkata'); 
 
-/* IMPORTANT: Disable all output/errors for PDF */
 error_reporting(0);
 ini_set('display_errors', 0);
 
 require_once 'config.php';
 require_once 'fpdf/fpdf.php';
 
-/* ===============================
-   SECURITY CHECK
-   =============================== */
+// --- Auth & Quiz Check ---
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     die("Unauthorized access");
 }
@@ -19,155 +18,166 @@ if (!isset($_GET['quiz_id'])) {
     die("Quiz ID missing");
 }
 
-$student_id = $_SESSION['user_id'];
-$quiz_id    = (int) $_GET['quiz_id'];
+$student_id = (int)$_SESSION['user_id'];
+$quiz_id    = (int)$_GET['quiz_id'];
 
 /* ===============================
-   FETCH STUDENT NAME
+    FETCH INFO
    =============================== */
-$studentRes = mysqli_query($conn, "
-    SELECT name 
-    FROM Students 
-    WHERE id = $student_id 
+$infoQuery = "
+    SELECT 
+        s.name as student_name, 
+        q.title, 
+        q.start_time
+    FROM quizzes q
+    CROSS JOIN Students s 
+    WHERE q.id = $quiz_id AND s.id = $student_id
     LIMIT 1
-");
-$studentRow  = mysqli_fetch_assoc($studentRes);
-$student_name = $studentRow['name'] ?? 'Student';
-
-/* ===============================
-   FETCH QUIZ TITLE AND CREATED DATE
-   =============================== */
-$quizRes = mysqli_query($conn, "
-    SELECT title, created_at
-    FROM quizzes 
-    WHERE id = $quiz_id 
-    LIMIT 1
-");
-$quizRow   = mysqli_fetch_assoc($quizRes);
-$quiz_title = $quizRow['title'] ?? 'Quiz';
-$quiz_created_at = $quizRow['created_at'] ?? date('Y-m-d H:i:s');
-
-/* ===============================
-   GET ATTEMPT ID (SUBMITTED ONLY)
-   =============================== */
-$attemptRes = mysqli_query($conn, "
-    SELECT id
-    FROM quiz_attempts
-    WHERE quiz_id = $quiz_id
-    AND student_id = $student_id
-    AND status = 'submitted'
-    LIMIT 1
-");
-
-if (mysqli_num_rows($attemptRes) === 0) {
-    die("Quiz not submitted yet");
-}
-
-$attemptRow = mysqli_fetch_assoc($attemptRes);
-$attempt_id = (int) $attemptRow['id'];
-
-/* ===============================
-   FETCH ANSWER KEY (OBJECTIVE ONLY)
-   =============================== */
-$query = "
-SELECT
-    q.question_text,
-    q.marks,
-    q.answer_explanation,
-    sa.selected_answer,
-    qa.correct_answer
-FROM student_answers sa
-JOIN questions q
-    ON q.id = sa.question_id
-JOIN question_answers qa
-    ON qa.question_id = q.id
-WHERE sa.attempt_id = $attempt_id
-AND q.question_type != 'descriptive'
 ";
 
-$result = mysqli_query($conn, $query);
+$infoRes = mysqli_query($conn, $infoQuery);
+$infoRow = mysqli_fetch_assoc($infoRes);
 
-if (mysqli_num_rows($result) === 0) {
-    die("No objective questions found");
-}
+if (!$infoRow) { die("Data not found"); }
 
-/* ===============================
-   GENERATE PROFESSIONAL PDF
-   =============================== */
+$student_name = $infoRow['student_name'];
+$quiz_title   = $infoRow['title'];
+
+$conduction_date = !empty($infoRow['start_time']) 
+    ? date('d M Y, h:i A', strtotime($infoRow['start_time'])) 
+    : 'Not Scheduled';
+
 $pdf = new FPDF();
 $pdf->AddPage();
 
-/* ===== TITLE ===== */
+/* HEADER */
 $pdf->SetFont('Arial', 'B', 18);
-$pdf->SetTextColor(90, 14, 36); // maroon
-$pdf->Cell(0, 12, 'ANSWER KEY', 0, 1, 'C');
-
+$pdf->SetTextColor(90, 14, 36); 
+$pdf->Cell(0, 12, 'OFFICIAL ANSWER KEY', 0, 1, 'C');
 $pdf->Ln(2);
 $pdf->SetDrawColor(90, 14, 36);
 $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
 $pdf->Ln(8);
 
-/* ===== STUDENT / QUIZ INFO ===== */
+/* INFO SECTION */
 $pdf->SetFont('Arial', '', 11);
 $pdf->SetTextColor(0, 0, 0);
 
 $pdf->Cell(40, 8, 'Student Name:', 0, 0);
-$pdf->Cell(0, 8, $student_name, 0, 1);
+$pdf->Cell(0, 8, utf8_decode($student_name), 0, 1);
 
 $pdf->Cell(40, 8, 'Quiz Title:', 0, 0);
-$pdf->Cell(0, 8, $quiz_title, 0, 1);
+$pdf->Cell(0, 8, utf8_decode($quiz_title), 0, 1);
 
-$pdf->Cell(40, 8, 'Created On:', 0, 0);
-$pdf->Cell(0, 8, date('d M Y, h:i A', strtotime($quiz_created_at)), 0, 1);
+$pdf->Cell(40, 8, 'Quiz Date (IST):', 0, 0);
+$pdf->SetFont('Arial', 'B', 11); 
+$pdf->Cell(0, 8, $conduction_date, 0, 1); 
 
-$pdf->Ln(6);
+$pdf->Ln(8);
 
-/* ===== QUESTIONS ===== */
+/* QUESTIONS LOOP */
+$query = "SELECT id, question_text, question_type, answer_explanation, correct_answer_text, media_path 
+          FROM questions WHERE quiz_id = $quiz_id ORDER BY id ASC";
+$result = mysqli_query($conn, $query);
 $qno = 1;
 
 while ($row = mysqli_fetch_assoc($result)) {
+    $qid = $row['id'];
+    $q_type = $row['question_type'];
+    $media = $row['media_path'];
+    
+    // Check for page break - increased buffer for images
+    if($pdf->GetY() > 200) { $pdf->AddPage(); }
 
-    // Question box
+    // 1. Render Question Text
     $pdf->SetFillColor(245, 245, 245);
     $pdf->SetFont('Arial', 'B', 11);
-    $pdf->MultiCell(0, 9, "Q$qno. {$row['question_text']}", 0, 'L', true);
+    $pdf->SetTextColor(0, 0, 0);
+    $q_text = utf8_decode(html_entity_decode($row['question_text']));
+    $pdf->MultiCell(0, 9, "Q$qno. " . $q_text, 0, 'L', true);
+    $pdf->Ln(2);
 
-    $pdf->Ln(1);
+    // 2. Render Media (Image or QR) UNDER the text
+    if (!empty($media)) {
+        $ext = strtolower(pathinfo($media, PATHINFO_EXTENSION));
+        $image_exts = ['jpg', 'jpeg', 'png', 'gif'];
 
-    $pdf->SetFont('Arial', '', 11);
-
-    // Your Answer
-    $pdf->Cell(45, 8, 'Your Answer:', 0, 0);
-    $pdf->Cell(0, 8, $row['selected_answer'], 0, 1);
-
-    // Correct Answer
-    $pdf->Cell(45, 8, 'Correct Answer:', 0, 0);
-    $pdf->Cell(0, 8, $row['correct_answer'], 0, 1);
-
-    // Explanation (if exists)
-    if (!empty($row['answer_explanation'])) {
-        $pdf->Cell(45, 8, 'Explanation:', 0, 1);
-        $pdf->MultiCell(0, 8, $row['answer_explanation']);
+        if (in_array($ext, $image_exts)) {
+            if (file_exists($media)) {
+                // Image(path, x, y, width, height)
+                // Center the image slightly
+                $pdf->Image($media, 15, $pdf->GetY(), 40); 
+                $pdf->Ln(42); // Move Y down after image
+            }
+        } else {
+            // QR Code for Video/Audio
+            $full_url = "http://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/" . $media;
+            $qr_api = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($full_url);
+            
+            $pdf->Image($qr_api, 15, $pdf->GetY(), 30, 30, 'PNG');
+            $pdf->SetX(15);
+            $pdf->SetY($pdf->GetY() + 31);
+            $pdf->SetFont('Arial', 'I', 8);
+            $pdf->Cell(30, 5, 'Scan to Play', 0, 1, 'C');
+            $pdf->Ln(2);
+        }
     }
 
-    // Marks
-    $pdf->Cell(45, 8, 'Marks:', 0, 0);
-    $pdf->Cell(0, 8, $row['marks'], 0, 1);
-    // Separator
+    // 3. Question Metadata
+    $pdf->SetFont('Arial', 'I', 9);
+    $pdf->SetTextColor(100, 100, 100);
+    $pdf->Cell(0, 6, "Type: " . strtoupper(str_replace('_', ' ', $q_type)), 0, 1);
+    $pdf->Ln(1);
+
+    $correct_display = "";
+    if ($q_type === 'mcq') {
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(0, 6, 'Options:', 0, 1);
+        $pdf->SetFont('Arial', '', 10);
+        
+        $optRes = mysqli_query($conn, $optQuery = "SELECT option_text, is_correct FROM question_options WHERE question_id = $qid");
+        while ($opt = mysqli_fetch_assoc($optRes)) {
+            $pdf->Cell(10); 
+            $pdf->Cell(0, 6, "- " . utf8_decode(html_entity_decode($opt['option_text'])), 0, 1);
+            if ($opt['is_correct'] == 1) { $correct_display = $opt['option_text']; }
+        }
+        $pdf->Ln(2);
+    } elseif ($q_type === 'descriptive') {
+        $correct_display = 'Manual Grading Required';
+    } else {
+        $correct_display = !empty($row['correct_answer_text']) ? $row['correct_answer_text'] : "Not specified by teacher";
+    }
+
+    /* CORRECT ANSWER SECTION */
+    $pdf->SetTextColor(46, 125, 50); 
+    $pdf->SetFont('Arial', 'B', 11);
+    $pdf->Cell(45, 8, 'Correct Answer:', 0, 0);
+    $pdf->SetFont('Arial', '', 11);
+    $pdf->MultiCell(0, 8, utf8_decode(html_entity_decode($correct_display)), 0, 'L');
+
+    if (!empty($row['answer_explanation'])) {
+        $pdf->Ln(1);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(0, 6, 'Explanation:', 0, 1);
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->MultiCell(0, 6, utf8_decode(html_entity_decode($row['answer_explanation'])));
+    }
+
     $pdf->Ln(4);
-    $pdf->SetDrawColor(200, 200, 200);
+    $pdf->SetDrawColor(220, 220, 220);
     $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
     $pdf->Ln(6);
-
+    
     $qno++;
 }
 
-/* ===== FOOTER ===== */
+/* FOOTER */
 $pdf->SetY(-15);
 $pdf->SetFont('Arial', 'I', 9);
 $pdf->SetTextColor(120, 120, 120);
-$pdf->Cell(0, 10, 'Generated by QuizLance', 0, 0, 'C');
+$pdf->Cell(0, 10, 'Generated by QuizLance | Page ' . $pdf->PageNo(), 0, 0, 'C');
 
-/* DOWNLOAD */
-$pdf->Output('D', 'Answer_Key.pdf');
+$pdf->Output('D', 'Answer_Key_' . str_replace(' ', '_', $quiz_title) . '.pdf');
 exit;

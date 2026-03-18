@@ -32,6 +32,53 @@ if (mysqli_num_rows($qres) === 0) {
 $quiz = mysqli_fetch_assoc($qres);
 
 /* ===============================
+   CHECK ASSIGNMENT ACCESS
+   =============================== */
+// Check if this quiz has selective assignments
+$assignmentCheck = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM quiz_assignments WHERE quiz_id=$quiz_id");
+$assignmentData = mysqli_fetch_assoc($assignmentCheck);
+$hasAssignments = $assignmentData['cnt'] > 0;
+
+if ($hasAssignments) {
+    // If quiz has selective assignments, verify student is assigned
+    $studentAssigned = mysqli_query($conn, "SELECT id FROM quiz_assignments WHERE quiz_id=$quiz_id AND student_id=$student_id");
+    
+    if (mysqli_num_rows($studentAssigned) === 0) {
+        ?>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Access Denied</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+                body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+                .error-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 500px; text-align: center; }
+                .error-icon { font-size: 60px; color: #d32f2f; margin-bottom: 20px; }
+                h2 { color: #5A0E24; margin-bottom: 15px; }
+                p { color: #666; line-height: 1.6; margin-bottom: 20px; }
+                .btn { display: inline-block; background: #5A0E24; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; }
+                .btn:hover { background: #5d9415; }
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <div class="error-icon"><i class="fas fa-lock"></i></div>
+                <h2>Access Denied</h2>
+                <p>This quiz has been assigned to specific students only, and you are not authorized to attempt it.</p>
+                <p style="font-size: 13px; color: #999;">If you believe this is an error, please contact your teacher.</p>
+                <a href="scheduled_quizzes_student.php" class="btn"><i class="fas fa-arrow-left"></i> Back to Quizzes</a>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit();
+    }
+}
+
+/* ===============================
    CHECK IF QUIZ ALREADY STARTED
    =============================== */
 $attemptRes = mysqli_query(
@@ -133,6 +180,22 @@ $checkEnroll = mysqli_query(
 if (mysqli_num_rows($checkEnroll) === 0) {
     die("You are not enrolled in this class");
 }
+
+
+/* ===============================
+   CHECK QUIZ ASSIGNMENT
+   =============================== */
+$checkAssign = mysqli_query(
+    $conn,
+    "SELECT id FROM quiz_assignments
+     WHERE quiz_id=$quiz_id
+     AND student_id=$student_id"
+);
+
+if (mysqli_num_rows($checkAssign) === 0) {
+    die("You are not assigned to this quiz.");
+}
+
 
 /* ===============================
    CHECK / CREATE ATTEMPT
@@ -274,153 +337,289 @@ body {
     font-weight:bold;
     cursor:pointer;
 }
+
+.options {
+    margin-top: 20px;
+}
+
+.option-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.option-card:hover {
+    border-color: #5d9415;
+    background: #f0f7e8;
+}
+
+.option-card input {
+    display: none;
+}
+
+.option-label {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #333;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.option-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* SELECTED STATE */
+.option-card input:checked + .option-label {
+    background: #5d9415;
+    color: white;
+}
+
+.option-card input:checked + .option-label + .option-text {
+    font-weight: bold;
+}
+
+.text-input {
+    width: 300px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.text-area {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.blank-input {
+    border: none;
+    border-bottom: 2px dashed #5A0E24; /* Theme color */
+    width: 150px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #5d9415; 
+    text-align: center;
+    outline: none;
+    background: transparent;
+    padding: 0 5px;
+    display: inline-block;
+    vertical-align: baseline;
+    border-radius: 0; /* Ensures no rounded corners hide the dash */
+    -webkit-appearance: none; /* Removes mobile/safari default styling */
+}
+
+.blank-input:focus {
+    border-bottom: 2px solid #5d9415; /* Becomes solid when typing */
+    background: rgba(93, 148, 21, 0.05); /* Very light green tint */
+}
+
+.media-container{
+    margin:20px 0;
+}
+
+.media-container img,
+.media-container video{
+    max-width:400px;
+    border-radius:10px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.15);
+}
+
 </style>
 </head>
 
 <body>
 
-<script>
-let isSubmitting = false;
-let tabViolationLocked = false; // 🔒 NEW
-</script>
-
-
+<body>
 
 <div class="quiz-header">
     <h2><?= htmlspecialchars($quiz['title']) ?></h2>
     <?php if ($questionTime > 0): ?>
-<div class="timer">
-    Question Time: <span id="qTimer"><?= $questionTime ?></span>s
-</div>
-<?php endif; ?>
-
-    <div class="timer" id="timer">Loading...</div>
-</div>
-
-<form method="POST" action="save_answer.php">
-
-
-
-<input type="hidden" name="quiz_id" value="<?= $quiz_id ?>">
-<input type="hidden" name="attempt_id" value="<?= $attempt_id ?>">
-<input type="hidden" name="next_q" value="<?= $currentIndex + 1 ?>">
-
-<div class="card">
-
-<?php
-$qno = $currentIndex + 1;
-?>
-
-
-<div class="question">
-    <h4><?= $qno ?>. <?= htmlspecialchars($q['question_text']) ?></h4>
-
-    <?php if ($q['question_type'] === 'descriptive'): ?>
-    <textarea
-        name="answer[<?= $q['id'] ?>]"
-        rows="5"
-        style="width:100%;padding:10px;margin-top:10px"
-        placeholder="Write your answer here..."></textarea>
-<?php endif; ?>
-
-
-    <?php if (!empty($q['media_path'])): ?>
-        <?php if ($q['question_type'] === 'image'): ?>
-            <img src="<?= $q['media_path'] ?>" style="max-width:300px;"><br><br>
-        <?php elseif ($q['question_type'] === 'video'): ?>
-            <video controls width="300">
-                <source src="<?= $q['media_path'] ?>">
-            </video><br><br>
-        <?php elseif ($q['question_type'] === 'audio'): ?>
-            <audio controls>
-                <source src="<?= $q['media_path'] ?>">
-            </audio><br><br>
-        <?php endif; ?>
+    <div class="timer">
+        Question Time: <span id="qTimer"><?= $questionTime ?></span>s
+    </div>
     <?php endif; ?>
 
-<!-- MCQ -->
-<?php if ($q['question_type'] === 'mcq'): ?>
+    <div class="timer" id="mainTimer">Loading...</div>
+</div>
 
-    <?php
-    $opts = mysqli_query(
-        $conn,
-        "SELECT * FROM question_options WHERE question_id={$q['id']}"
-    );
-    while ($o = mysqli_fetch_assoc($opts)):
+<form method="POST" action="save_answer.php" id="quizForm">
+    <input type="hidden" name="quiz_id" value="<?= $quiz_id ?>">
+    <input type="hidden" name="attempt_id" value="<?= $attempt_id ?>">
+    <input type="hidden" name="next_q" value="<?= $currentIndex + 1 ?>">
+
+    <div class="card">
+        <?php $qno = $currentIndex + 1; ?>
+
+        <div class="question">
+    <?php $type = strtolower($q['question_type']); // Move this line here! ?>
+    <h4>
+    <?= $qno ?>. 
+    <?php 
+    if ($type === 'fill_blank') {
+        $input_tag = '<input type="text" name="answer['.$q['id'].']" class="blank-input" placeholder="..." required autocomplete="off">';
+        
+        // Check if [blank] exists in the text
+        if (strpos($q['question_text'], '[blank]') !== false) {
+            echo str_ireplace('[blank]', $input_tag, htmlspecialchars($q['question_text']));
+        } else {
+            // If [blank] is missing, show the text and add the line at the end
+            echo htmlspecialchars($q['question_text']) . " " . $input_tag;
+        }
+    } else {
+        // THIS IS THE FIX: Echo the text for all other types (MCQ, Image, etc.)
+        echo htmlspecialchars($q['question_text']);
+    }
     ?>
-        <label>
-            <input type="radio"
-                   name="answer[<?= $q['id'] ?>]"
-                   value="<?= htmlspecialchars($o['option_text']) ?>">
-            <?= htmlspecialchars($o['option_text']) ?>
-        </label><br>
-    <?php endwhile; ?>
+</h4>
 
-<!-- TRUE / FALSE -->
-<?php elseif ($q['question_type'] === 'true_false'): ?>
+    <?php if (!empty($q['media_path'])): ?>
+    <div style="margin:15px 0; text-align: center;">
+        <?php 
+        // Get the file extension (e.g., jpg, png, mp4)
+        $file_ext = strtolower(pathinfo($q['media_path'], PATHINFO_EXTENSION));
+        
+        $image_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $video_exts = ['mp4', 'webm', 'ogg'];
+        $audio_exts = ['mp3', 'wav', 'ogg'];
 
-    <label>
-        <input type="radio" name="answer[<?= $q['id'] ?>]" value="True"> True
-    </label><br>
-    <label>
-        <input type="radio" name="answer[<?= $q['id'] ?>]" value="False"> False
-    </label>
+        if (in_array($file_ext, $image_exts)): ?>
+            <img src="<?= htmlspecialchars($q['media_path']) ?>" 
+                 style="max-width:80%; max-height:300px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.15);">
 
-<!-- ONE WORD / FILL BLANK -->
-<?php elseif ($q['question_type'] === 'one_word' || $q['question_type'] === 'fill_blank'): ?>
+        <?php elseif (in_array($file_ext, $video_exts)): ?>
+            <video controls style="max-width:100%; max-height:400px; border-radius:10px;">
+                <source src="<?= htmlspecialchars($q['media_path']) ?>" type="video/<?= $file_ext ?>">
+                Your browser does not support the video tag.
+            </video>
 
-    <input type="text"
-           name="answer[<?= $q['id'] ?>]"
-           placeholder="Your answer"
-           style="width:300px;padding:8px;">
-
-<!-- DESCRIPTIVE (ONLY ADDITION) -->
-<?php elseif ($q['question_type'] === 'descriptive'): ?>
-
-    <textarea
-        name="answer[<?= $q['id'] ?>]"
-        rows="5"
-        style="width:100%;padding:10px"
-        placeholder="Write your answer here..."></textarea>
-
+        <?php elseif (in_array($file_ext, $audio_exts)): ?>
+            <audio controls style="width:100%; max-width:400px;">
+                <source src="<?= htmlspecialchars($q['media_path']) ?>" type="audio/<?= $file_ext ?>">
+            </audio>
+        <?php endif; ?>
+    </div>
 <?php endif; ?>
 
+    <div class="options-container" style="margin-top: 20px;">
+        <?php 
+        $type = strtolower($q['question_type']); 
+        
+        if ($type === 'mcq'): 
+            $opts = mysqli_query($conn, "SELECT * FROM question_options WHERE question_id={$q['id']}");
+            $optIndex = 0;
+            while ($o = mysqli_fetch_assoc($opts)):
+                $optIndex++;
+        ?>
+                <label class="option-card">
+                    <input type="radio" name="answer[<?= $q['id'] ?>]" value="<?= htmlspecialchars($o['option_text']) ?>" required>
+                    <span class="option-label"><?= chr(64 + $optIndex) ?></span>
+                    <span class="option-text"><?= htmlspecialchars($o['option_text']) ?></span>
+                </label>
+        <?php endwhile; ?>
 
+        <?php elseif ($type === 'true_false'): ?>
+            <label class="option-card">
+                <input type="radio" name="answer[<?= $q['id'] ?>]" value="True" required>
+                <span class="option-label">A</span>
+                <span class="option-text">True</span>
+            </label>
+            <label class="option-card">
+                <input type="radio" name="answer[<?= $q['id'] ?>]" value="False" required>
+                <span class="option-label">B</span>
+                <span class="option-text">False</span>
+            </label>
+
+        <?php elseif ($type === 'descriptive'): ?>
+            <textarea name="answer[<?= $q['id'] ?>]" rows="5" class="text-area" placeholder="Write your answer here..." required></textarea>
+
+        <?php elseif ($type === 'fill_blank'): ?>
+    <p style="font-size: 14px; color: #666; font-style: italic;">Note: Type your answer directly into the dashed line in the question above.</p>
+
+        <?php else: ?>
+            <p style="margin-bottom:10px;"><strong>Your Answer:</strong></p>
+            <input type="text" name="answer[<?= $q['id'] ?>]" class="text-input" placeholder="Type your answer here" required>
+        <?php endif; ?>
+    </div>
 </div>
 
-<button class="btn">Submit Quiz</button>
-
-</div>
+<button type="submit" class="btn">
+    <?= ($currentIndex + 1 === $totalQuestions) ? 'Finish Quiz' : 'Next Question' ?>
+</button>
 </form>
 
-<script>
-let remaining = <?= $expireTime ?> - Math.floor(Date.now() / 1000);
-let timer = document.getElementById("timer");
+<div id="violationBox" style="position:fixed; bottom:10px; right:10px; background:#5A0E24; color:white; padding:6px 12px; border-radius:6px; font-size:13px; z-index:9999;">
+    Violations: 0 / 3
+</div>
 
-let interval = setInterval(() => {
+<script>
+/* ===============================
+   GLOBAL STATE
+   =============================== */
+var isSubmitting = false;
+let violationCount = 0;
+const MAX_VIOLATIONS = 3;
+let lastViolationTime = 0;
+const VIOLATION_COOLDOWN = 2000;
+
+/* ===============================
+   QUIZ TIMERS
+   =============================== */
+// Main Quiz Timer
+let remaining = <?= $expireTime ?> - Math.floor(Date.now() / 1000);
+const mainTimerDisplay = document.getElementById("mainTimer");
+
+let mainInterval = setInterval(() => {
+    if (isSubmitting) return;
     let min = Math.floor(remaining / 60);
     let sec = remaining % 60;
-    timer.innerText = min + "m " + sec + "s";
+    mainTimerDisplay.innerText = min + "m " + sec + "s";
 
     if (remaining <= 0) {
-        clearInterval(interval);
-        isSubmitting = true;
-document.forms[0].submit();
-
+        clearInterval(mainInterval);
+        autoSubmit("Quiz time expired!");
     }
     remaining--;
 }, 1000);
-</script>
 
-<script>
-// Tab-switch / focus detection for anti-cheating
-console.log('Tab-detection script loaded');
-let violationCount = 0;
-const MAX_VIOLATIONS = 3;
-let isSubmitting = false;
-let lastViolationTime = 0;
-const VIOLATION_COOLDOWN = 800; // ms cooldown between violations
+// Individual Question Timer
+let qRemaining = <?= $questionTime ?>;
+if (qRemaining > 0) {
+    const qTimerDisplay = document.getElementById("qTimer");
+    let qInterval = setInterval(() => {
+        if (isSubmitting) return;
+        qTimerDisplay.innerText = qRemaining;
+        if (qRemaining <= 0) {
+            clearInterval(qInterval);
+            autoSubmit("Question time expired!");
+        }
+        qRemaining--;
+    }, 1000);
+}
 
+function autoSubmit(msg) {
+    if (isSubmitting) return;
+    isSubmitting = true;
+    alert(msg);
+    document.getElementById("quizForm").submit();
+}
+
+/* ===============================
+   ANTI-CHEAT LOGIC
+   =============================== */
 function updateViolationBox() {
     const box = document.getElementById("violationBox");
     if (box) box.innerText = "Violations: " + violationCount + " / " + MAX_VIOLATIONS;
@@ -428,77 +627,37 @@ function updateViolationBox() {
 
 function registerViolation(source) {
     if (isSubmitting) return;
+
     const now = Date.now();
-    if (now - lastViolationTime < VIOLATION_COOLDOWN) return; // debounce
+    if (now - lastViolationTime < VIOLATION_COOLDOWN) return; 
+    
     lastViolationTime = now;
     violationCount++;
     updateViolationBox();
-    console.log('Violation #' + violationCount + ' from ' + source);
-
-    try {
-        alert(
-            "⚠ Violation detected!\n\n" +
-            "You switched away from the quiz (" + source + ").\n" +
-            "Violation: " + violationCount + " / " + MAX_VIOLATIONS
-        );
-    } catch (e) {
-        console.log('Alert blocked or unavailable');
-    }
 
     if (violationCount >= MAX_VIOLATIONS) {
-        console.log('Max violations reached - submitting');
-        try { alert('Quiz auto-submitted due to multiple violations.'); } catch(e){}
-        isSubmitting = true;
-        // submit if form exists
-        if (document.forms && document.forms[0]) document.forms[0].submit();
+        autoSubmit('Quiz auto-submitted due to multiple violations.');
+    } else {
+        setTimeout(() => {
+            alert("⚠ Violation detected!\n\nYou left the quiz page (" + source + ").\nViolation: " + violationCount + " / " + MAX_VIOLATIONS);
+        }, 100);
     }
 }
 
-// visibilitychange: most reliable for tab switches
-document.addEventListener('visibilitychange', function (e) {
-    console.log('visibilitychange event, hidden=', document.hidden);
-    if (document.hidden) {
-        registerViolation('visibilitychange');
+// 1. Tab Switching Detection
+document.addEventListener('visibilitychange', function () {
+    if (document.hidden && !isSubmitting) {
+        registerViolation('Tab Switch');
     }
 });
 
-// blur/focus: catches window switching (Alt+Tab)
+// 2. Window Blur (Alt-Tab, Clicking outside)
 window.addEventListener('blur', function () {
-    console.log('window blur event');
-    registerViolation('window.blur');
-});
-
-window.addEventListener('focus', function () {
-    console.log('window focus event');
-});
-
-// polling fallback: check document.hasFocus every second - useful in some browsers
-let lastFocusState = document.hasFocus();
-setInterval(function(){
-    const focused = document.hasFocus();
-    if (focused !== lastFocusState) {
-        console.log('hasFocus changed:', focused);
-        if (!focused) registerViolation('hasFocus-poll');
-        lastFocusState = focused;
+    if (!isSubmitting) {
+        registerViolation('Window Switch');
     }
-}, 1000);
+});
 </script>
-
-
-<div id="violationBox" style="
-position:fixed;
-bottom:10px;
-right:10px;
-background:#5A0E24;
-color:white;
-padding:6px 12px;
-border-radius:6px;
-font-size:13px;
-z-index:9999;
-">
-Violations: 0 / 3
-</div>
-
 
 </body>
 </html>

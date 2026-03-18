@@ -355,6 +355,13 @@ body {
             </div>
         </a>
 
+        <a href="sample_quizzes.php" class="menu-link">
+    <div class="menu-card">
+        <i class="fas fa-flask"></i>
+        <h3>Sample Quizzes</h3>
+    </div>
+</a>
+
         <a href="scheduled_quizzes.php" class="menu-link">
             <div class="menu-card">
                 <i class="fas fa-calendar-alt"></i>
@@ -369,6 +376,20 @@ body {
             </div>
         </a>
 
+        <a href="teacher_doubts.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-broadcast-tower"></i>
+                <h3>Doubts</h3>
+            </div>
+        </a>
+
+        <a href="teacher_attempts.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-check-circle"></i>
+                <h3>Evaluate Attempts</h3>
+            </div>
+        </a>
+
         <a href="view_result_teacher.php" class="menu-link">
             <div class="menu-card">
                 <i class="fas fa-chart-line"></i>
@@ -376,17 +397,31 @@ body {
             </div>
         </a>
 
-        <a href="leaderboard.php" class="menu-link">
+        <a href="view_uploaded_certificates.php" class="menu-link">
             <div class="menu-card">
-                <i class="fas fa-trophy"></i>
-                <h3>Leaderboard</h3>
+                <i class="fas fa-award"></i>
+                <h3>View Uploaded Certificates</h3>
             </div>
         </a>
 
-        <a href="certificates.php" class="menu-link">
+        <a href="upload_certificate.php" class="menu-link">
             <div class="menu-card">
-                <i class="fas fa-award"></i>
-                <h3>Certificates</h3>
+                <i class="fas fa-file-upload"></i>
+                <h3>Upload Certificates</h3>
+            </div>
+        </a>
+
+        <a href="upload_answer_key.php" class="menu-link">
+    <div class="menu-card">
+        <i class="fas fa-file-upload"></i>
+        <h3>Upload Answer Key</h3>
+    </div>
+</a>
+
+        <a href="generate_certificate.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-file-upload"></i>
+                <h3>Generate Certificates</h3>
             </div>
         </a>
 

@@ -180,60 +180,58 @@ h2, h3 { color:#5A0E24; }
     <?php endif; ?>
 
     <?php while ($q = mysqli_fetch_assoc($questions)): ?>
-        <div class="question-box">
+    <div class="question-box">
 
-            <p><strong>Q:</strong> <?= htmlspecialchars($q['question_text']) ?></p>
-            <p><em>Type:</em> <?= ucfirst(str_replace('_',' ', $q['question_type'])) ?></p>
-            <p><em>Marks:</em> <?= $q['marks'] ?></p>
-
-            <!-- MEDIA -->
-            <?php if (!empty($q['media_path'])): ?>
-                <div class="media">
-                    <?php if ($q['question_type'] === 'image'): ?>
-                        <img src="<?= $q['media_path'] ?>" width="200">
-                    <?php elseif ($q['question_type'] === 'video'): ?>
-                        <video src="<?= $q['media_path'] ?>" controls width="300"></video>
-                    <?php elseif ($q['question_type'] === 'audio'): ?>
-                        <audio src="<?= $q['media_path'] ?>" controls></audio>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- MCQ OPTIONS -->
-            <?php if ($q['question_type'] === 'mcq'): ?>
-                <?php
-                $opts = mysqli_query($conn,
-                    "SELECT * FROM question_options WHERE question_id=".$q['id']
-                );
-                while ($o = mysqli_fetch_assoc($opts)):
-                ?>
-                    <div class="option <?= $o['is_correct'] ? 'correct' : '' ?>">
-                        • <?= htmlspecialchars($o['option_text']) ?>
-                        <?= $o['is_correct'] ? '(Correct)' : '' ?>
-                    </div>
-                <?php endwhile; ?>
-            <?php endif; ?>
-
-            <!-- ANSWER -->
-            <?php
-            $ans = mysqli_query($conn,
-                "SELECT correct_answer FROM question_answers WHERE question_id=".$q['id']
-            );
-            if ($a = mysqli_fetch_assoc($ans)):
+        <p><strong>Q:</strong> <?= htmlspecialchars($q['question_text']) ?></p>
+        
+        <p><em>Type:</em> 
+            <?php 
+                $display_type = str_replace('_',' ', $q['question_type']);
+                if(in_array($q['question_type'], ['image','video','audio'])) $display_type .= " based";
+                echo ucfirst($display_type);
             ?>
-                <p class="correct">Answer: <?= htmlspecialchars($a['correct_answer']) ?></p>
-            <?php endif; ?>
+        </p>
+        
+        <p><em>Marks:</em> <?= $q['marks'] ?></p>
 
-            <?php if ($q['hint']): ?>
-                <p><strong>Hint:</strong> <?= htmlspecialchars($q['hint']) ?></p>
-            <?php endif; ?>
+        <?php if (!empty($q['media_path'])): ?>
+            <div class="media">
+                <?php if ($q['question_type'] === 'image'): ?>
+                    <img src="<?= $q['media_path'] ?>" width="200" style="border-radius:8px;">
+                <?php elseif ($q['question_type'] === 'video'): ?>
+                    <video src="<?= $q['media_path'] ?>" controls width="300"></video>
+                <?php elseif ($q['question_type'] === 'audio'): ?>
+                    <audio src="<?= $q['media_path'] ?>" controls></audio>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
-            <?php if ($q['answer_explanation']): ?>
-                <p><strong>Explanation:</strong> <?= htmlspecialchars($q['answer_explanation']) ?></p>
-            <?php endif; ?>
+        <?php if ($q['question_type'] === 'mcq'): ?>
+            <?php
+            $opts = mysqli_query($conn, "SELECT * FROM question_options WHERE question_id=".$q['id']);
+            while ($o = mysqli_fetch_assoc($opts)):
+            ?>
+                <div class="option <?= $o['is_correct'] ? 'correct' : '' ?>">
+                    • <?= htmlspecialchars($o['option_text']) ?>
+                    <?= $o['is_correct'] ? '(Correct Answer)' : '' ?>
+                </div>
+            <?php endwhile; ?>
+        <?php endif; ?>
 
-        </div>
-    <?php endwhile; ?>
+        <?php if ($q['question_type'] !== 'mcq' && !empty($q['correct_answer_text'])): ?>
+            <p class="correct">Answer: <?= htmlspecialchars($q['correct_answer_text']) ?></p>
+        <?php endif; ?>
+
+        <?php if ($q['hint']): ?>
+            <p><strong>Hint:</strong> <?= htmlspecialchars($q['hint']) ?></p>
+        <?php endif; ?>
+
+        <?php if ($q['answer_explanation']): ?>
+            <p><strong>Explanation:</strong> <?= htmlspecialchars($q['answer_explanation']) ?></p>
+        <?php endif; ?>
+
+    </div>
+<?php endwhile; ?>
 
     <!-- ACTION BUTTONS -->
     <form method="post">

@@ -29,11 +29,12 @@ $imgSrc = $profile_pic
 /* FETCH CERTIFICATES */
 $certificates = mysqli_query(
     $conn,
-    "SELECT q.title, c.score, c.certificate_path, c.issued_at
+    "SELECT q.title, qa.total_marks, c.file_path, c.uploaded_at
      FROM certificates c
      JOIN quizzes q ON q.id = c.quiz_id
+     JOIN quiz_attempts qa ON qa.quiz_id = q.id AND qa.student_id = c.student_id
      WHERE c.student_id = $student_id
-     ORDER BY c.issued_at DESC"
+     ORDER BY c.uploaded_at DESC"
 );
 ?>
 <!DOCTYPE html>
@@ -138,14 +139,14 @@ th{background:#5A0E24;color:white;}
             <?php while ($c = mysqli_fetch_assoc($certificates)): ?>
             <tr>
                 <td><?= htmlspecialchars($c['title']) ?></td>
-                <td><?= htmlspecialchars($c['score']) ?></td>
-                <td><?= date("d M Y", strtotime($c['issued_at'])) ?></td>
+                <td><?= htmlspecialchars($c['total_marks']) ?></td>
+                <td><?= date("d M Y", strtotime($c['uploaded_at'])) ?></td>
                 <td>
                     <a class="btn btn-download"
-                       href="<?= htmlspecialchars($c['certificate_path']) ?>"
-                       target="_blank">
-                        Download
-                    </a>
+   href="<?= htmlspecialchars($c['file_path']) ?>"
+   download>
+   Download
+</a>
                 </td>
             </tr>
             <?php endwhile; ?>

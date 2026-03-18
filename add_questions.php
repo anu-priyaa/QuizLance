@@ -69,75 +69,57 @@ $time_limit = ($time_limit === '') ? NULL : (int)$time_limit;
 
     /* ===== INSERT QUESTION ===== */
     if (!isset($error)) {
+        // Explicitly get the type from POST and clean it
+        $final_type = mysqli_real_escape_string($conn, $_POST['question_type']); 
 
-        mysqli_query(
-            $conn,
-            "INSERT INTO questions
-(quiz_id, question_type, question_text, media_path, hint, answer_explanation, marks, time_limit)
-VALUES
-(
-    $quiz_id,
-    '$question_type',
-    '$question_text',
-    '$media_path',
-    '$hint',
-    '$explanation',
-    $marks,
-    " . ($time_limit === NULL ? "NULL" : $time_limit) . "
-)
-"
-        );
+        $insert_query = "INSERT INTO questions 
+            (quiz_id, question_type, question_text, media_path, hint, answer_explanation, marks, time_limit) 
+            VALUES 
+            (
+                $quiz_id, 
+                '$final_type', 
+                '$question_text', 
+                " . ($media_path ? "'$media_path'" : "NULL") . ", 
+                '$hint', 
+                '$explanation', 
+                $marks, 
+                " . ($time_limit === NULL ? "NULL" : $time_limit) . "
+            )";
 
-        $question_id = mysqli_insert_id($conn);
+        if (mysqli_query($conn, $insert_query)) {
+            $question_id = mysqli_insert_id($conn);
 
-        /* ===== MCQ OPTIONS ===== */
-        if ($question_type === 'mcq') {
+            /* ===== MCQ OPTIONS ===== */
+            if ($question_type === 'mcq') {
+                for ($i = 1; $i <= 4; $i++) {
+                    $opt = trim(mysqli_real_escape_string($conn, $_POST["option$i"]));
+                    $is_correct = ($_POST['correct_option'] == $i) ? 1 : 0;
 
-            for ($i = 1; $i <= 4; $i++) {
-                $opt = trim(mysqli_real_escape_string($conn, $_POST["option$i"]));
-                $is_correct = ($_POST['correct_option'] == $i) ? 1 : 0;
-
-                if ($opt !== '') {
-                    mysqli_query(
-                        $conn,
-                        "INSERT INTO question_options
-                        (question_id, option_text, is_correct)
-                        VALUES
-                        ($question_id, '$opt', $is_correct)"
-                    );
+                    if ($opt !== '') {
+                        mysqli_query($conn, "INSERT INTO question_options (question_id, option_text, is_correct) 
+                                            VALUES ($question_id, '$opt', $is_correct)");
+                    }
                 }
             }
+
+            /* ===== SAVE ANSWERS (UNIFIED) ===== */
+            $correct_val = null;
+            if (in_array($question_type, ['image', 'video', 'audio'])) {
+                $correct_val = trim(mysqli_real_escape_string($conn, $_POST['media_answer']));
+            } elseif (in_array($question_type, ['one_word', 'fill_blank'])) {
+                $correct_val = trim(mysqli_real_escape_string($conn, $_POST['text_answer']));
+            } elseif ($question_type === 'true_false') {
+                $correct_val = $_POST['true_false_answer'];
+            }
+
+            if ($correct_val !== null) {
+                mysqli_query($conn, "UPDATE questions SET correct_answer_text = '$correct_val' WHERE id = $question_id");
+            }
+
+            $success = "Question added successfully";
+        } else {
+            $error = "Database Error: " . mysqli_error($conn);
         }
-
-        /* ===== TRUE / FALSE ===== */
-        if ($question_type === 'true_false') {
-
-            $answer = $_POST['true_false_answer'];
-
-            mysqli_query(
-                $conn,
-                "INSERT INTO question_answers
-                (question_id, correct_answer)
-                VALUES
-                ($question_id, '$answer')"
-            );
-        }
-
-        /* ===== ONE WORD / FILL BLANK ===== */
-        if ($question_type === 'one_word' || $question_type === 'fill_blank') {
-
-            $answer = trim(mysqli_real_escape_string($conn, $_POST['text_answer']));
-
-            mysqli_query(
-                $conn,
-                "INSERT INTO question_answers
-                (question_id, correct_answer)
-                VALUES
-                ($question_id, '$answer')"
-            );
-        }
-
-        $success = "Question added successfully";
     }
 }
 ?>
@@ -225,11 +207,16 @@ textarea { resize:vertical; }
         <textarea name="question_text" required></textarea>
     </div>
 
-    <!-- MEDIA -->
     <div id="media_fields" class="hidden">
+    <div class="form-group">
         <label>Upload Media *</label>
         <input type="file" name="media_file" accept="image/*,video/*,audio/*">
     </div>
+    <div class="form-group">
+        <label>Correct Answer (Identify the media) *</label>
+        <input type="text" name="media_answer" placeholder="e.g. Einstein, Oxygen, etc.">
+    </div>
+</div>
 
     <!-- MCQ -->
     <div id="mcq_fields" class="hidden">
@@ -308,7 +295,6 @@ textarea { resize:vertical; }
 
 <script>
 function toggleFields() {
-
     ['mcq_fields','tf_fields','text_fields','media_fields','desc_fields']
         .forEach(id => document.getElementById(id).classList.add('hidden'));
 
@@ -320,9 +306,11 @@ function toggleFields() {
     if (type === 'true_false')
         document.getElementById('tf_fields').classList.remove('hidden');
 
+    // Show the 'text_fields' for One Word and Fill Blank
     if (type === 'one_word' || type === 'fill_blank')
         document.getElementById('text_fields').classList.remove('hidden');
 
+    // Show 'media_fields' (which now contains the media_answer input)
     if (['image','video','audio'].includes(type))
         document.getElementById('media_fields').classList.remove('hidden');
 
