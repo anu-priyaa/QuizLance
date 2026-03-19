@@ -24,15 +24,21 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH ASSIGNED CLASSES */
-$classes = mysqli_query(
-    $conn,
-    "SELECT c.class_name, t.name AS teacher_name
-     FROM class_students cs
-     JOIN Classes c ON cs.class_id = c.id
-     JOIN Teachers t ON c.teacher_id = t.id
-     WHERE cs.student_id = $student_id"
-);
+/* FETCH ASSIGNED CLASSES (Including Sub-Teachers via junction table) */
+$classes_query = "
+    SELECT 
+        c.class_name, 
+        t1.name AS teacher_name, 
+        GROUP_CONCAT(t2.name SEPARATOR ', ') AS sub_teachers
+    FROM class_students cs
+    JOIN Classes c ON cs.class_id = c.id
+    LEFT JOIN Teachers t1 ON c.teacher_id = t1.id
+    LEFT JOIN class_subteachers cst ON c.id = cst.class_id
+    LEFT JOIN Teachers t2 ON cst.teacher_id = t2.id
+    WHERE cs.student_id = $student_id
+    GROUP BY c.id
+";
+$classes = mysqli_query($conn, $classes_query);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -214,7 +220,6 @@ body { background:#f0f2f5; }
 
 <body>
 
-<!-- TOP BAR -->
 <div class="topbar">
     <i class="fas fa-bars" id="menuToggle"></i>
 
@@ -233,7 +238,6 @@ body { background:#f0f2f5; }
     </div>
 </div>
 
-<!-- SIDEBAR -->
 <div class="sidebar collapsed no-transition" id="sidebar">
     <div class="sidebar-profile" onclick="openProfilePopup()">
         <img src="<?= $imgSrc ?>">
@@ -246,16 +250,16 @@ body { background:#f0f2f5; }
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
 </div>
 
-<!-- MAIN -->
 <div class="main-content full" id="mainContent">
     <h2 class="page-title">My Classes</h2>
 
     <div class="class-grid">
-        <?php if (mysqli_num_rows($classes) > 0): ?>
+        <?php if ($classes && mysqli_num_rows($classes) > 0): ?>
             <?php while ($row = mysqli_fetch_assoc($classes)): ?>
                 <div class="class-card">
                     <h3><?= htmlspecialchars($row['class_name']) ?></h3>
                     <p><b>Teacher:</b> <?= htmlspecialchars($row['teacher_name']) ?></p>
+                    <p><b>Sub Teacher:</b> <?= $row['sub_teachers'] ? htmlspecialchars($row['sub_teachers']) : 'None assigned' ?></p>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -264,7 +268,6 @@ body { background:#f0f2f5; }
     </div>
 </div>
 
-<!-- PROFILE POPUP -->
 <div id="profilePopup" class="profile-popup">
     <div class="profile-popup-content">
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
@@ -324,5 +327,4 @@ function closeProfilePopup() {
 <?php include 'includes/auto_logout.php'; ?>
 
 </body>
-
 </html>
