@@ -123,7 +123,7 @@ body{background:#f0f2f5;}
     </div>
     <a href="teacher_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes.php"><i class="fas fa-users"></i> My Classes</a>
-    <a href="manage_classes.php"><i class="fas fa-users"></i> Manage Class</a>
+    <a href="manage_classes.php"><i class="fas fa-tasks"></i> Manage Class</a>
     <a href="archived_classes.php">
         <i class="fas fa-archive"></i> Archived Classes
     </a>

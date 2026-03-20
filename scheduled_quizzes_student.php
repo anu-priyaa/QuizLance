@@ -29,10 +29,11 @@ $imgSrc = $profile_pic
 /* FETCH SCHEDULED QUIZZES */
 $quizzes = mysqli_query(
     $conn,
-    "SELECT q.id, q.title, q.start_time, q.end_time, c.class_name
+    "SELECT q.id, q.title, q.start_time, q.end_time, c.class_name, t.name AS teacher_name
      FROM quizzes q
      JOIN Classes c ON q.class_id = c.id
      JOIN class_students cs ON cs.class_id = c.id
+     JOIN Teachers t ON q.teacher_id = t.id
      WHERE cs.student_id = $student_id
      ORDER BY q.start_time ASC"
 );
@@ -88,19 +89,26 @@ body{background:#f0f2f5;}
 
 /* ===== MAIN ===== */
 .main-content{
-    padding:90px 40px 40px;
+    padding:90px 20px 40px;
+    max-width: 100%;
 }
-
 .card{
-    background:white;padding:30px;border-radius:15px;
+    background:white;
+    padding:30px;
+    border-radius:15px;
     box-shadow:0 4px 12px rgba(0,0,0,0.05);
     border-left:5px solid #5d9415;
+    width:100%;
 }
 
 h2{color:#5A0E24;margin-bottom:20px;}
 
 /* TABLE */
-table{width:100%;border-collapse:collapse;}
+table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout: auto;
+}
 th,td{padding:14px;border-bottom:1px solid #ddd;text-align:left;}
 th{background:#5A0E24;color:white;}
 
@@ -111,6 +119,10 @@ th{background:#5A0E24;color:white;}
 .btn-live{background:#5d9415;color:white;}
 .btn-upcoming{background:#999;color:white;}
 .btn-expired{background:#ccc;color:#333;}
+
+td:last-child {
+    white-space: nowrap;
+}
 
 /* PROFILE POPUP */
 .profile-popup{
@@ -158,7 +170,8 @@ th{background:#5A0E24;color:white;}
             <tr>
                 <th>Quiz Title</th>
                 <th>Class</th>
-                <th>Start Time</th>
+<th>Created By</th>
+<th>Start Time</th>
                 <th>End Time</th>
                 <th>Action</th>
             </tr>
@@ -181,7 +194,8 @@ $attempt = mysqli_fetch_assoc($attemptRes);
             <tr>
                 <td><?= htmlspecialchars($q['title']) ?></td>
                 <td><?= htmlspecialchars($q['class_name']) ?></td>
-                <td><?= date("d M Y, h:i A", $start) ?></td>
+<td><?= htmlspecialchars($q['teacher_name']) ?></td>
+<td><?= date("d M Y, h:i A", $start) ?></td>
                 <td><?= date("d M Y, h:i A", $end) ?></td>
                 <td>
 <?php

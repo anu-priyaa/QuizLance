@@ -38,7 +38,7 @@ $attempt = mysqli_fetch_assoc($attRes);
 
 // If already submitted, don't re-calculate, just redirect
 if ($attempt['status'] === 'submitted') {
-    header("Location: view_score.php?attempt_id=$attempt_id");
+    header("Location: quiz_result.php?attempt_id=$attempt_id");
     exit();
 }
 
@@ -147,5 +147,5 @@ if (mysqli_num_rows($resCheck) > 0) {
     mysqli_query($conn, "INSERT INTO Results (quiz_id, student_id, score, total_marks, submitted_at) VALUES ($quiz_id, $student_id, $total_earned_score, $total_possible_marks, '$final_submitted_at')");
 }
 
-header("Location: view_score.php?attempt_id=$attempt_id");
+header("Location: quiz_result.php?attempt_id=$attempt_id");
 exit();

@@ -138,7 +138,11 @@ $passed = ($score >= $passMarks);
                 $correct_ans = trim($q['correct_answer_text'] ?? '');
             }
 
-            $is_correct = (!empty($correct_ans) && strcasecmp($student_ans, $correct_ans) === 0);
+            if ($q['question_type'] === 'descriptive') {
+    $is_correct = null; // not evaluated
+} else {
+    $is_correct = (!empty($correct_ans) && strcasecmp($student_ans, $correct_ans) === 0);
+}
         ?>
             <div class="question-item">
                 <span class="q-text"><?= $count++ ?>. <?= htmlspecialchars($q['question_text']) ?></span>
@@ -156,7 +160,15 @@ $passed = ($score >= $passMarks);
                     </div>
                 <?php endif; ?>
                 
-                <div class="ans-row <?= (empty($student_ans)) ? 'student-ans' : ($is_correct ? 'correct-ans' : 'wrong-ans') ?>">
+                <div class="ans-row 
+<?= 
+    ($q['question_type'] === 'descriptive') 
+        ? 'student-ans' 
+        : (empty($student_ans) 
+            ? 'student-ans' 
+            : ($is_correct ? 'correct-ans' : 'wrong-ans')
+        ) 
+?>">
                     <i class="fas <?= (empty($student_ans)) ? 'fa-minus' : ($is_correct ? 'fa-check-circle' : 'fa-times-circle') ?>"></i>
                     <span><strong>Your Answer:</strong> <?= !empty($student_ans) ? htmlspecialchars($student_ans) : '<i>Not Answered</i>' ?></span>
                 </div>

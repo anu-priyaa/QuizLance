@@ -135,7 +135,7 @@ $attemptRes = mysqli_query($conn, "SELECT * FROM quiz_attempts WHERE quiz_id=$qu
 if (mysqli_num_rows($attemptRes) > 0) {
     $attempt = mysqli_fetch_assoc($attemptRes);
     if ($attempt['status'] === 'submitted') {
-        header("Location: view_score.php?quiz_id=$quiz_id");
+        header("Location: quiz_result.php?quiz_id=$quiz_id");
         exit();
     }
     $attempt_id = $attempt['id'];
@@ -150,7 +150,7 @@ $expireTime = strtotime($attempt['started_at']) + ((int)$quiz['duration'] * 60);
 
 if (time() > $expireTime) {
     mysqli_query($conn, "UPDATE quiz_attempts SET status='submitted', submitted_at=NOW() WHERE id=$attempt_id AND status != 'submitted'");
-    header("Location: view_score.php?quiz_id=$quiz_id");
+    header("Location: quiz_result.php?quiz_id=$quiz_id");
     exit();
 }
 
@@ -193,6 +193,21 @@ $questionTime = (int)($q['time_limit'] ?? 0);
         .option-card input:checked + .option-label + .option-text { font-weight: bold; }
         .text-area { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
         .blank-input { border: none; border-bottom: 2px dashed #5A0E24; width: 150px; font-size: 18px; font-weight: bold; color: #5d9415; text-align: center; outline: none; background: transparent; }
+    .textbox-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 12px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.textbox-input:focus {
+    border-color: #5d9415;
+    box-shadow: 0 0 5px rgba(93,148,21,0.3);
+}
     </style>
 </head>
 <body>
@@ -214,25 +229,31 @@ $questionTime = (int)($q['time_limit'] ?? 0);
         <div class="question">
             <?php $type = strtolower($q['question_type']); ?>
             <h4>
-                <?= $currentIndex + 1 ?>. 
-                <?php 
-                if ($type === 'fill_blank') {
-                    $input_tag = '<input type="text" name="answer['.$q['id'].']" class="blank-input" placeholder="..." required autocomplete="off">';
-                    echo (strpos($q['question_text'], '[blank]') !== false) 
-                        ? str_ireplace('[blank]', $input_tag, htmlspecialchars($q['question_text'])) 
-                        : htmlspecialchars($q['question_text']) . " " . $input_tag;
-                } else {
-                    echo htmlspecialchars($q['question_text']);
-                }
-                ?>
-            </h4>
+    <?= $currentIndex + 1 ?>. 
+    <?php 
+    if ($type === 'fill_blank') {
+        $input_tag = '<input type="text" name="answer['.$q['id'].']" class="blank-input" placeholder="..." required autocomplete="off">';
+
+        if (strpos($q['question_text'], '[blank]') !== false) {
+            echo str_replace('[blank]', $input_tag, $q['question_text']);
+        } else {
+            echo htmlspecialchars($q['question_text']) . " " . $input_tag;
+        }
+
+    } else {
+        // 🔥 THIS WAS MISSING
+        echo htmlspecialchars($q['question_text']);
+    }
+    ?>
+</h4>
 
             <?php if (!empty($q['media_path'])): ?>
                 <div style="margin:20px 0; text-align: center;">
                     <?php 
                     $ext = strtolower(pathinfo($q['media_path'], PATHINFO_EXTENSION));
                     if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
-                        <img src="<?= htmlspecialchars($q['media_path']) ?>" style="max-width:80%; border-radius:10px;">
+                        <img src="<?= htmlspecialchars($q['media_path']) ?>" 
+     style="max-width:300px; width:100%; height:auto; border-radius:10px; display:block; margin:auto;">
                     <?php elseif (in_array($ext, ['mp4', 'webm'])): ?>
                         <video controls style="max-width:100%;"><source src="<?= htmlspecialchars($q['media_path']) ?>" type="video/<?= $ext ?>"></video>
                     <?php endif; ?>
@@ -261,8 +282,26 @@ $questionTime = (int)($q['time_limit'] ?? 0);
                     </label>
 
                 <?php elseif ($type === 'descriptive'): ?>
-                    <textarea name="answer[<?= $q['id'] ?>]" rows="5" class="text-area" required placeholder="Type your answer here..."></textarea>
-                <?php endif; ?>
+    <textarea name="answer[<?= $q['id'] ?>]" rows="5" class="text-area" required placeholder="Type your answer here..."></textarea>
+
+<?php elseif ($type === 'one_word' || $type === 'short_answer'): ?>
+    <input type="text" 
+           name="answer[<?= $q['id'] ?>]" 
+           class="textbox-input" 
+           placeholder="Type your answer" 
+           required autocomplete="off">
+
+<?php elseif ($type === 'image' || $type === 'video' || $type === 'audio'): ?>
+    <!-- 🔥 ADD THIS BLOCK -->
+    <input type="text" 
+           name="answer[<?= $q['id'] ?>]" 
+           class="textbox-input" 
+           placeholder="Type your answer" 
+           required autocomplete="off">
+
+<?php endif; ?>
+
+                
             </div>
         </div>
 
@@ -278,6 +317,9 @@ $questionTime = (int)($q['time_limit'] ?? 0);
 
 <script>
 var isSubmitting = false;
+document.getElementById("quizForm").addEventListener("submit", function () {
+    isSubmitting = true;
+});
 let violationCount = 0;
 const MAX_VIOLATIONS = 3;
 let lastViolationTime = 0;
@@ -324,8 +366,16 @@ function registerViolation(source) {
     }
 }
 
-document.addEventListener('visibilitychange', () => { if (document.hidden) registerViolation('Tab Switch'); });
-window.addEventListener('blur', () => { registerViolation('Window Switch'); });
+document.addEventListener('visibilitychange', () => {
+    if (!isSubmitting && document.hidden) {
+        registerViolation('Tab Switch');
+    }
+});
+window.addEventListener('blur', () => {
+    if (!isSubmitting) {
+        registerViolation('Window Switch');
+    }
+});
 </script>
 </body>
 </html>
