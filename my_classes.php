@@ -11,6 +11,8 @@ if (!$conn) {
     die("Database connection failed");
 }
 
+$testing_mode = false;
+
 $teacher_id = $_SESSION['user_id'];
 
 /* FETCH TEACHER INFO */
@@ -28,18 +30,39 @@ $imgSrc = $profile_pic
     : 'https://via.placeholder.com/85';
 
 /* CREATE CLASS */
+/* CREATE CLASS */
 if (isset($_POST['create_class'])) {
+
     $class_name = trim(mysqli_real_escape_string($conn, $_POST['class_name']));
 
     if ($class_name === '') {
         $error = "Class name is required";
     } else {
-        mysqli_query(
-            $conn, 
-            "INSERT INTO Classes (teacher_id, class_name, status) 
-             VALUES ($teacher_id, '$class_name', 'active')"
-        );
-        $success = "Class created successfully";
+
+        /* 🔒 APPLY CONDITION ONLY IF NOT TESTING */
+        if (!$testing_mode) {
+
+            $check = mysqli_query($conn, "
+                SELECT * FROM Classes 
+                WHERE teacher_id = $teacher_id AND status='active'
+            ");
+
+            if (mysqli_num_rows($check) > 0) {
+                $error = "You can create only ONE class as Class Teacher.";
+            }
+        }
+
+        /* ✅ IF NO ERROR → INSERT */
+        if (!isset($error)) {
+
+            mysqli_query(
+                $conn,
+                "INSERT INTO Classes (teacher_id, class_name, status) 
+                 VALUES ($teacher_id, '$class_name', 'active')"
+            );
+
+            $success = "Class created successfully";
+        }
     }
 }
 
@@ -58,15 +81,13 @@ if (isset($_POST['delete_class'])) {
 }
 
 /* 🔥 UPDATED: FETCH ACTIVE CLASSES AND JOIN WITH THE SUB-TEACHER MAPPING TABLE */
-$classes = mysqli_query(
-    $conn, 
-    "SELECT c.*, T.name AS sub_teacher_display_name 
-     FROM Classes c
-     LEFT JOIN class_subteachers cs ON c.id = cs.class_id
-     LEFT JOIN Teachers T ON cs.teacher_id = T.id
-     WHERE c.teacher_id=$teacher_id AND c.status='active' 
-     ORDER BY c.id DESC"
-);
+$classes = mysqli_query($conn, "
+SELECT c.*, t.name AS class_teacher_name
+FROM Classes c
+JOIN Teachers t ON c.teacher_id = t.id
+WHERE c.teacher_id=$teacher_id AND c.status='active'
+ORDER BY c.id DESC
+");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -140,6 +161,76 @@ button:hover { background:#4e7d12; transform:translateY(-2px); }
 .profile-popup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center; }
 .profile-popup-content { background:white; padding:30px; border-radius:15px; text-align:center; position:relative; }
 .profile-popup-content img { width:200px; height:200px; border-radius:50%; border:4px solid #5d9415; object-fit: cover; display: block; }
+/* ===== SUB TEACHER POPUP ===== */
+.sub-popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2500;
+    justify-content: center;
+    align-items: center;
+}
+
+.sub-popup-content {
+    background: white;
+    padding: 40px 35px;
+    border-radius: 18px;
+    width: 420px;
+    max-width: 90%;
+    position: relative;
+    animation: popupFade 0.3s ease;
+}
+
+/* Title */
+.sub-popup-content h2 {
+    text-align: center;
+    color: #5A0E24;
+    margin-bottom: 25px;
+}
+
+/* List container */
+.sub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Each item */
+.sub-item {
+    background: #f4f6f8;
+    padding: 12px 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+/* Icon */
+.sub-item i {
+    color: #5d9415;
+}
+
+.sub-item i.fa-trash:hover {
+    transform: scale(1.2);
+}
+
+/* Close button */
+.sub-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+/* Animation */
+@keyframes popupFade {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
 .close-btn { position:absolute; top:10px; right:14px; font-size:22px; cursor:pointer; }
 </style>
 </head>
@@ -191,9 +282,14 @@ button:hover { background:#4e7d12; transform:translateY(-2px); }
                 <h3><?= htmlspecialchars($row['class_name']) ?></h3>
                 
                 <p class="teacher-name">
-                    <i class="fas fa-user-tag"></i> 
-                    Sub-Teacher: <?= $row['sub_teacher_display_name'] ? htmlspecialchars($row['sub_teacher_display_name']) : 'None' ?>
-                </p>
+    <i class="fas fa-user"></i> 
+    Class Teacher: <?= htmlspecialchars($row['class_teacher_name']) ?>
+</p>
+
+<p style="color:#5A0E24;cursor:pointer;font-weight:bold;"
+   onclick="openSubTeachers(<?= $row['id'] ?>)">
+   View Sub Teachers
+</p>
 
                 <small>
                     Created on <?= date("d M Y", strtotime($row['created_at'])) ?>
@@ -215,6 +311,15 @@ button:hover { background:#4e7d12; transform:translateY(-2px); }
         <span class="close-btn" onclick="closeProfilePopup()">&times;</span>
         <img src="<?= $imgSrc ?>">
         <h2><?= htmlspecialchars($teacher_name) ?></h2>
+    </div>
+</div>
+
+<div id="subTeacherPopup" class="sub-popup">
+    <div class="sub-popup-content">
+        <span class="sub-close" onclick="closeSubPopup()">&times;</span>
+        <h2>Sub Teachers</h2>
+
+        <div id="subTeacherList" class="sub-list"></div>
     </div>
 </div>
 
@@ -252,6 +357,34 @@ document.addEventListener('click', function (e) {
         document.getElementById('profileDropdown').style.display = 'none';
     }
 });
+
+function openSubTeachers(classId) {
+
+    fetch('get_subteachers.php?class_id=' + classId)
+    .then(res => res.text())
+    .then(data => {
+        document.getElementById('subTeacherList').innerHTML = data;
+        document.getElementById('subTeacherPopup').style.display = 'flex';
+    });
+}
+
+function closeSubPopup() {
+    document.getElementById('subTeacherPopup').style.display = 'none';
+}
+
+function removeSubTeacher(teacherId, classId){
+
+    if(confirm("Do you really want to remove this sub teacher from the class?")){
+
+        fetch("remove_subteacher.php?teacher_id=" + teacherId + "&class_id=" + classId)
+        .then(res => res.text())
+        .then(() => {
+            // reload list after delete
+            openSubTeachers(classId);
+        });
+
+    }
+}
 </script>
 
 <?php if(file_exists('includes/auto_logout.php')) include 'includes/auto_logout.php'; ?>

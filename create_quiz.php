@@ -55,6 +55,29 @@ $classes = mysqli_query(
      )"
 );
 
+/* =========================
+   SECURITY: VALID CLASS ACCESS (EXTRA PROTECTION)
+   ========================= */
+if (isset($_POST['class_id'])) {
+
+    $class_id = (int)$_POST['class_id'];
+
+    $accessCheck = mysqli_query($conn,"
+        SELECT c.id 
+        FROM Classes c
+        LEFT JOIN Class_SubTeachers s
+        ON c.id = s.class_id
+        WHERE c.id = $class_id
+        AND (
+            c.teacher_id = $teacher_id
+            OR s.teacher_id = $teacher_id
+        )
+    ");
+
+    if (mysqli_num_rows($accessCheck) == 0) {
+        die("Unauthorized access to this class");
+    }
+}
 
 /* =========================
    FETCH PREVIOUS QUIZZES
@@ -140,7 +163,7 @@ if (mysqli_num_rows($verify) === 0) {
     $quiz_id = mysqli_insert_id($conn);
 
 }
-if(isset($quiz_id)){
+if (!isset($error) && isset($quiz_id)) {
 
 $assign_type = $_POST['assign_type'];
 
@@ -219,9 +242,6 @@ else if ($assign_type === 'selected') {
 
 }
 
-/* =========================
-   REUSE QUESTIONS
-   ========================= */
 
 /* =========================
    REUSE QUESTIONS

@@ -418,6 +418,13 @@ body {
     </div>
 </a>
 
+<a href="assigned_classes.php" class="menu-link">
+            <div class="menu-card">
+                <i class="fas fa-question-circle"></i>
+                <h3>Assigned Classes</h3>
+            </div>
+        </a>
+
         <a href="generate_certificate.php" class="menu-link">
             <div class="menu-card">
                 <i class="fas fa-file-upload"></i>

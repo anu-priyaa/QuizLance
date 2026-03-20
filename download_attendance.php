@@ -23,16 +23,18 @@ if (!$conn) {
     die("Database connection failed");
 }
 
-/* ===============================
-   VERIFY QUIZ BELONGS TO TEACHER
-   =============================== */
 $quiz_check = mysqli_query(
     $conn,
-    "SELECT title, start_time
-     FROM quizzes
-     WHERE id = $quiz_id
-     AND teacher_id = $teacher_id"
+    "SELECT q.title, q.start_time
+     FROM quizzes q
+     JOIN Classes c ON q.class_id = c.id
+     WHERE q.id = $quiz_id
+     AND (
+         c.teacher_id = $teacher_id   /* class teacher */
+         OR q.teacher_id = $teacher_id /* quiz creator */
+     )"
 );
+
 
 if (mysqli_num_rows($quiz_check) === 0) {
     die("You are not allowed to download this attendance");

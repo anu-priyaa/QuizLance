@@ -51,10 +51,16 @@ if (isset($_POST['remove_student'])) {
    ========================= */
 $classes = mysqli_query(
     $conn,
-    "SELECT id, class_name, created_at
-     FROM Classes
-     WHERE teacher_id=$teacher_id AND status='active'
-     ORDER BY created_at DESC"
+    "SELECT DISTINCT c.id, c.class_name, c.created_at
+     FROM Classes c
+     LEFT JOIN Class_SubTeachers s
+     ON c.id = s.class_id
+     WHERE c.status='active'
+     AND (
+        c.teacher_id=$teacher_id
+        OR s.teacher_id=$teacher_id
+     )
+     ORDER BY c.created_at DESC"
 );
 ?>
 <!DOCTYPE html>

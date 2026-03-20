@@ -20,14 +20,18 @@ if (!$conn) {
 $teacher_id = $_SESSION['user_id'];
 $class_id   = (int)$_GET['class_id'];
 
-/* VERIFY CLASS BELONGS TO TEACHER */
 $classRes = mysqli_query(
     $conn,
-    "SELECT class_name
-     FROM Classes
-     WHERE id = $class_id
-     AND teacher_id = $teacher_id
-     AND status = 'active'"
+    "SELECT c.class_name
+     FROM Classes c
+     LEFT JOIN Class_SubTeachers s
+     ON c.id = s.class_id
+     WHERE c.id = $class_id
+     AND c.status = 'active'
+     AND (
+         c.teacher_id = $teacher_id
+         OR s.teacher_id = $teacher_id
+     )"
 );
 
 if (mysqli_num_rows($classRes) === 0) {

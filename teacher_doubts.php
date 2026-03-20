@@ -3,13 +3,32 @@ session_start();
 
 // Database connection
 $conn = mysqli_connect("localhost", "root", "", "QuizLance");
-
+$teacher_id = $_SESSION['user_id'];
 /* 1. POST ANSWER LOGIC */
 if(isset($_POST['reply_btn'])){
-    $doubt_id = mysqli_real_escape_string($conn, $_POST['doubt_id']);
     $answer = mysqli_real_escape_string($conn, $_POST['answer']);
 
-    $query = "UPDATE doubts SET answer='$answer', status='answered' WHERE id=$doubt_id";
+    $doubt_id = (int)$_POST['doubt_id'];
+
+/* 🔒 VERIFY ACCESS */
+$check = mysqli_query($conn,"
+SELECT d.id
+FROM doubts d
+JOIN quizzes q ON d.quiz_id = q.id
+JOIN Classes c ON q.class_id = c.id
+WHERE d.id = $doubt_id
+AND (
+    c.teacher_id = $teacher_id
+    OR q.teacher_id = $teacher_id
+)
+");
+
+if(mysqli_num_rows($check) === 0){
+    die("Unauthorized reply");
+}
+    $query = "UPDATE doubts 
+SET answer='$answer', status='answered', answered_at = NOW(), viewed_by_student = 0 
+WHERE id=$doubt_id";
     if(mysqli_query($conn, $query)){
         $_SESSION['msg'] = "Reply posted successfully!";
     }
@@ -18,17 +37,44 @@ if(isset($_POST['reply_btn'])){
     exit();
 }
 
-/* 2. DELETE RESPONSE LOGIC */
 if(isset($_GET['delete_ans_id'])){
     $did = (int)$_GET['delete_ans_id'];
+
+    /* 🔒 VERIFY ACCESS */
+    $check = mysqli_query($conn,"
+SELECT d.id
+FROM doubts d
+JOIN quizzes q ON d.quiz_id = q.id
+JOIN Classes c ON q.class_id = c.id
+WHERE d.id = $did
+AND d.viewed_by_student = 0   /* 🔥 IMPORTANT */
+AND (
+    c.teacher_id = $teacher_id
+    OR q.teacher_id = $teacher_id
+)
+");
+
+    if(mysqli_num_rows($check) === 0){
+        die("Unauthorized delete");
+    }
+
     mysqli_query($conn, "UPDATE doubts SET answer=NULL, status='pending' WHERE id=$did");
     $_SESSION['msg'] = "Response deleted successfully!";
     header("Location: teacher_doubts.php");
     exit();
 }
 
-/* 3. FETCH DOUBTS */
-$doubts = mysqli_query($conn, "SELECT d.*, s.name FROM doubts d JOIN students s ON d.student_id = s.id ORDER BY d.created_at DESC");
+$doubts = mysqli_query($conn, "
+SELECT d.*, s.name, q.title
+FROM doubts d
+JOIN students s ON d.student_id = s.id
+JOIN quizzes q ON d.quiz_id = q.id
+JOIN Classes c ON q.class_id = c.id
+WHERE 
+    c.teacher_id = $teacher_id   /* class teacher */
+    OR q.teacher_id = $teacher_id /* quiz creator */
+ORDER BY d.created_at DESC
+");
 ?>
 
 <!DOCTYPE html>
@@ -99,23 +145,45 @@ $doubts = mysqli_query($conn, "SELECT d.*, s.name FROM doubts d JOIN students s 
 
     <?php while($d = mysqli_fetch_assoc($doubts)): ?>
         <div class="doubt-card">
+            <p><b>Quiz:</b> <?php echo htmlspecialchars($d['title']); ?></p>
             <div class="student"><?php echo htmlspecialchars($d['name']); ?></div>
             <span class="timestamp">Posted on: <?php echo date('d M Y, h:i A', strtotime($d['created_at'])); ?></span>
             <p style="color: #444; line-height: 1.5;"><?php echo htmlspecialchars($d['question']); ?></p>
 
             <?php if(!empty($d['answer'])): ?>
-                <div class="answer-box">
-                    <b>Your Response:</b><br>
-                    <?php echo nl2br(htmlspecialchars($d['answer'])); ?>
-                    <button type="button" class="btn-delete-ans" onclick="showDeleteModal(<?php echo $d['id']; ?>)">Delete Response</button>
-                </div>
-            <?php endif; ?>
+    <div class="answer-box">
+        <b>Your Response:</b><br>
+        <?php echo nl2br(htmlspecialchars($d['answer'])); ?>
+        <div style="font-size:12px;color:gray;margin-top:5px;">
+    Replied on: <?php if(!empty($d['answered_at'])){
+    echo date('d M Y, h:i A', strtotime($d['answered_at']));
+} else {
+    echo "Just now";
+} ?>
+</div>
+        <?php if($d['viewed_by_student'] == 0): ?>
+            <button type="button" class="btn-delete-ans"
+                onclick="showDeleteModal(<?php echo $d['id']; ?>)">
+                Delete Response
+            </button>
+        <?php endif; ?>
+        
+    </div>
+    
+<?php endif; ?>
 
-            <form method="POST">
-                <input type="hidden" name="doubt_id" value="<?php echo $d['id']; ?>">
-                <textarea name="answer" placeholder="Type your reply here..." required></textarea>
-                <button name="reply_btn" class="reply-btn">Submit Reply</button>
-            </form>
+            
+ <form method="POST">
+    <input type="hidden" name="doubt_id" value="<?php echo $d['id']; ?>">
+    
+    <textarea name="answer" placeholder="Type your reply here..." required><?php 
+        echo htmlspecialchars($d['answer']); 
+    ?></textarea>
+    
+    <button name="reply_btn" class="reply-btn">
+        <?php echo empty($d['answer']) ? "Submit Reply" : "Update Reply"; ?>
+    </button>
+</form>
         </div>
     <?php endwhile; ?>
 </div>

@@ -24,10 +24,15 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH QUIZZES */
 $quiz_res = mysqli_query(
     $conn,
-    "SELECT id, title FROM quizzes WHERE teacher_id=$teacher_id"
+    "SELECT DISTINCT q.id, q.title
+     FROM quizzes q
+     JOIN Classes c ON q.class_id = c.id
+     LEFT JOIN Class_SubTeachers s ON c.id = s.class_id
+     WHERE 
+        c.teacher_id = $teacher_id
+        OR s.teacher_id = $teacher_id"
 );
 ?>
 <!DOCTYPE html>

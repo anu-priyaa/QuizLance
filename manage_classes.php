@@ -37,7 +37,21 @@ $class_res = mysqli_query(
 /* ADD STUDENT MANUALLY */
 if (isset($_POST['add_student'])) {
 
-    $class_id = (int) $_POST['class_id'];
+$class_id = (int) $_POST['class_id'];
+
+    /* 🔒 ONLY CLASS TEACHER CAN ADD STUDENTS */
+$verify = mysqli_query($conn,"
+    SELECT teacher_id FROM Classes 
+    WHERE id=$class_id
+");
+
+$row = mysqli_fetch_assoc($verify);
+
+if ($row['teacher_id'] != $teacher_id) {
+    die("Only class teacher can add students");
+}
+
+    
     $email    = trim(mysqli_real_escape_string($conn, $_POST['email']));
 
     if ($email === '') {
@@ -75,7 +89,19 @@ if (isset($_POST['add_student'])) {
 /* CSV UPLOAD */
 if (isset($_POST['upload_csv'])) {
 
-    $class_id = (int) $_POST['class_id'];
+$class_id = (int) $_POST['class_id'];
+/* 🔒 ONLY CLASS TEACHER CAN ADD STUDENTS */
+$verify = mysqli_query($conn,"
+    SELECT teacher_id FROM Classes 
+    WHERE id=$class_id
+");
+
+$row = mysqli_fetch_assoc($verify);
+
+if ($row['teacher_id'] != $teacher_id) {
+    die("Only class teacher can upload students");
+}
+
 
     if ($_FILES['csv_file']['error'] !== 0) {
         $error = "CSV upload failed";
