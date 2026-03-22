@@ -13,8 +13,38 @@ if (!$conn) die("DB Error");
 
 $teacher_id = $_SESSION['user_id'];
 
-/* FETCH CLASSES */
-$classes = mysqli_query($conn, "SELECT id, class_name FROM classes");
+$class_ids = [];
+
+// Sub-teacher classes
+$res1 = mysqli_query($conn,"
+    SELECT class_id FROM class_subteachers
+    WHERE teacher_id = $teacher_id
+");
+
+while($r = mysqli_fetch_assoc($res1)){
+    $class_ids[] = $r['class_id'];
+}
+
+// Class teacher classes
+$res2 = mysqli_query($conn,"
+    SELECT id FROM classes
+    WHERE teacher_id = $teacher_id
+");
+
+while($r = mysqli_fetch_assoc($res2)){
+    $class_ids[] = $r['id'];
+}
+
+if(!empty($class_ids)){
+    $ids = implode(",", $class_ids);
+
+    $classes = mysqli_query($conn,"
+        SELECT id, class_name FROM classes
+        WHERE id IN ($ids)
+    ");
+}else{
+    $classes = mysqli_query($conn,"SELECT id, class_name FROM classes WHERE 1=0");
+}
 
 /* ADD ANNOUNCEMENT */
 if (isset($_POST['publish'])) {
@@ -31,14 +61,20 @@ if (isset($_POST['publish'])) {
     $success = "Announcement published successfully!";
 }
 
-/* FETCH TEACHER ANNOUNCEMENTS */
-$myAnn = mysqli_query($conn,
-    "SELECT a.*, c.class_name
-     FROM announcements a
-     JOIN classes c ON a.class_id = c.id
-     WHERE a.teacher_id = $teacher_id
-     ORDER BY a.created_at DESC"
-);
+if(!empty($class_ids)){
+    $ids = implode(",", $class_ids);
+
+    $myAnn = mysqli_query($conn,"
+        SELECT a.*, c.class_name, t.name AS teacher_name
+        FROM announcements a
+        JOIN classes c ON a.class_id = c.id
+        JOIN teachers t ON a.teacher_id = t.id
+        WHERE a.class_id IN ($ids)
+        ORDER BY a.created_at DESC
+    ");
+}else{
+    $myAnn = mysqli_query($conn,"SELECT * FROM announcements WHERE 1=0");
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,6 +210,7 @@ button:hover {
                 <p><?= nl2br(htmlspecialchars($a['message'])) ?></p>
                 <small>
                     Class: <?= htmlspecialchars($a['class_name']) ?> |
+By: <?= htmlspecialchars($a['teacher_name']) ?>|
                     Posted: <?= date('d M Y, h:i A', strtotime($a['created_at'])) ?>
                 </small>
             </div>

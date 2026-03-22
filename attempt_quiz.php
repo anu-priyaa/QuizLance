@@ -154,11 +154,41 @@ if (time() > $expireTime) {
     exit();
 }
 
-// FETCH QUESTIONS
-$order = ($shuffle_questions === 'yes') ? "RAND()" : "id";
-$res = mysqli_query($conn, "SELECT * FROM questions WHERE quiz_id=$quiz_id ORDER BY $order");
+// UNIQUE SESSION KEY FOR THIS ATTEMPT
+$order_key = "quiz_order_" . $attempt_id;
+
+if ($shuffle_questions === 'yes') {
+
+    // If order not already stored, generate once
+    if (!isset($_SESSION[$order_key])) {
+
+        $res = mysqli_query($conn, "SELECT id FROM questions WHERE quiz_id=$quiz_id ORDER BY RAND()");
+        $ids = [];
+
+        while ($row = mysqli_fetch_assoc($res)) {
+            $ids[] = $row['id'];
+        }
+
+        $_SESSION[$order_key] = $ids;
+    }
+
+    $ids = $_SESSION[$order_key];
+
+    // Convert array to comma string
+    $id_list = implode(',', $ids);
+
+    // Fetch questions in SAME order
+    $res = mysqli_query($conn, "SELECT * FROM questions WHERE id IN ($id_list) ORDER BY FIELD(id, $id_list)");
+
+} else {
+    $res = mysqli_query($conn, "SELECT * FROM questions WHERE quiz_id=$quiz_id ORDER BY id");
+}
+
+// Build question list
 $questionList = [];
-while ($row = mysqli_fetch_assoc($res)) { $questionList[] = $row; }
+while ($row = mysqli_fetch_assoc($res)) {
+    $questionList[] = $row;
+}
 
 $totalQuestions = count($questionList);
 $currentIndex = isset($_GET['q']) ? (int)$_GET['q'] : 0;
@@ -246,6 +276,12 @@ $questionTime = (int)($q['time_limit'] ?? 0);
     }
     ?>
 </h4>
+
+<?php if (!empty($q['hint'])): ?>
+    <p style="margin-top:10px; color:#555;">
+        <strong>Hint:</strong> <?= htmlspecialchars($q['hint']) ?>
+    </p>
+<?php endif; ?>
 
             <?php if (!empty($q['media_path'])): ?>
                 <div style="margin:20px 0; text-align: center;">
@@ -374,6 +410,56 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('blur', () => {
     if (!isSubmitting) {
         registerViolation('Window Switch');
+    }
+});
+
+// ❌ Disable copy, paste, cut
+document.addEventListener('copy', (e) => {
+    e.preventDefault();
+    registerViolation('Copy Attempt');
+});
+
+document.addEventListener('paste', (e) => {
+    e.preventDefault();
+    registerViolation('Paste Attempt');
+});
+
+document.addEventListener('cut', (e) => {
+    e.preventDefault();
+    registerViolation('Cut Attempt');
+});
+
+// ❌ Disable right click
+document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    registerViolation('Right Click');
+});
+
+// ❌ Disable text selection
+document.addEventListener('selectstart', (e) => {
+    e.preventDefault();
+});
+
+document.addEventListener('keydown', function(e) {
+
+   if (e.ctrlKey) {
+    const blocked = ['c', 'v', 'x', 'a', 'u', 's'];
+
+    if (blocked.includes(e.key.toLowerCase())) {
+
+        // Allow typing inside input/textarea
+        const tag = e.target.tagName.toLowerCase();
+
+        if (tag !== 'input' && tag !== 'textarea') {
+            e.preventDefault();
+            registerViolation('Keyboard Shortcut');
+        }
+    }
+}
+
+    // Print screen (optional)
+    if (e.key === "PrintScreen") {
+        registerViolation('Screenshot Attempt');
     }
 });
 </script>

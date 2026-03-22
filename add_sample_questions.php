@@ -26,6 +26,13 @@ $add_success = isset($_GET['success']) && $_GET['success'] == 1;
 $delete_success = isset($_GET['deleted']) && $_GET['deleted'] == 1;
 
 /* =========================
+   QUIZ STATUS CHECK
+   ========================= */
+$quiz_q = mysqli_query($conn, "SELECT status, title FROM sample_quizzes WHERE id=$quiz_id");
+$quiz_data = mysqli_fetch_assoc($quiz_q);
+$is_posted = ($quiz_data['status'] == 'posted');
+
+/* =========================
    TEACHER INFO 
    ========================= */
 $res = mysqli_query($conn, "SELECT name, profile_pic FROM Teachers WHERE id=$teacher_id");
@@ -53,21 +60,12 @@ if (isset($_POST['add_question'])) {
     
     if (mysqli_query($conn, $query)) {
         $question_id = mysqli_insert_id($conn);
-
         if ($type == "mcq") {
-            $options = [
-                mysqli_real_escape_string($conn, $_POST['option1']),
-                mysqli_real_escape_string($conn, $_POST['option2']),
-                mysqli_real_escape_string($conn, $_POST['option3']),
-                mysqli_real_escape_string($conn, $_POST['option4'])
-            ];
-            $correct = (int)$_POST['correct'];
-
-            foreach ($options as $index => $opt) {
+            for($i=1; $i<=4; $i++) {
+                $opt = mysqli_real_escape_string($conn, $_POST["option$i"]);
                 if (trim($opt) == "") continue;
-                $is_correct = ($correct == $index + 1) ? 1 : 0;
-                mysqli_query($conn, "INSERT INTO sample_question_options (question_id, option_text, is_correct) 
-                                     VALUES ($question_id, '$opt', $is_correct)");
+                $is_correct = ((int)$_POST['correct'] == $i) ? 1 : 0;
+                mysqli_query($conn, "INSERT INTO sample_question_options (question_id, option_text, is_correct) VALUES ($question_id, '$opt', $is_correct)");
             }
         }
         header("Location: add_sample_questions.php?quiz_id=$quiz_id&success=1");
@@ -76,23 +74,22 @@ if (isset($_POST['add_question'])) {
 }
 
 /* =========================
-   DELETE QUESTION LOGIC 
+   POST QUIZ LOGIC
+   ========================= */
+if (isset($_POST['post_quiz'])) {
+    mysqli_query($conn, "UPDATE sample_quizzes SET status='posted' WHERE id=$quiz_id");
+    header("Location: add_sample_questions.php?quiz_id=$quiz_id&posted=1"); 
+    exit();
+}
+
+/* =========================
+   DELETE LOGIC
    ========================= */
 if (isset($_POST['delete_question'])) {
     $qid = (int)$_POST['question_id'];
     mysqli_query($conn, "DELETE FROM sample_question_options WHERE question_id=$qid");
     mysqli_query($conn, "DELETE FROM sample_questions WHERE id=$qid");
     header("Location: add_sample_questions.php?quiz_id=$quiz_id&deleted=1");
-    exit();
-}
-
-/* =========================
-   POST QUIZ LOGIC (FIXED)
-   ========================= */
-if (isset($_POST['post_quiz'])) {
-    mysqli_query($conn, "UPDATE sample_quizzes SET status='posted' WHERE id=$quiz_id");
-    // Redirect back to THIS page with posted=1 to show the message
-    header("Location: add_sample_questions.php?quiz_id=$quiz_id&posted=1"); 
     exit();
 }
 
@@ -104,30 +101,46 @@ $qcount = mysqli_num_rows($questions);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Add Questions | QuizLance</title>
+    <title>Manage Questions | <?= htmlspecialchars($quiz_data['title']) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-        body { background:#f0f2f5; }
+        body { background:#f0f2f5; padding-bottom: 60px; }
         .topbar { position:fixed; top:0; left:0; width:100%; height:60px; background:#5A0E24; color:white; display:flex; align-items:center; padding:0 20px; z-index:1001; }
         .top-profile { margin-left:auto; display:flex; align-items:center; gap:8px; cursor:pointer; position:relative; }
-        .top-profile img { width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid #5d9415; }
-        .profile-dropdown { display:none; position:absolute; right:0; top:55px; background:white; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.15); min-width:180px; }
-        .profile-dropdown a { display:flex; align-items:center; gap:10px; padding:12px 15px; text-decoration:none; color:#333; }
-        .main-content { padding:80px 40px; max-width: 1000px; margin: auto; }
-        .card { background:white; padding:25px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,.05); border-left:5px solid #5d9415; margin-bottom:25px; }
-        .card h2 { color:#5A0E24; margin-bottom:15px; }
+        .top-profile img { width:36px; height:36px; border-radius:50%; border:2px solid #5d9415; }
+        .profile-dropdown { display:none; position:absolute; right:0; top:55px; background:white; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.15); min-width:150px; }
+        .profile-dropdown a { display:block; padding:12px; text-decoration:none; color:#333; }
+
+        .main-content { padding:80px 20px; max-width: 900px; margin: auto; }
+        .card { background:white; padding:25px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,.05); margin-bottom:20px; border-left: 5px solid #5d9415; }
+        
+        .finish-card { background: #fff; border-left: 5px solid #5A0E24; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        .pulse-btn { 
+            background:#5A0E24; color:white; padding:12px 25px; border-radius:50px; border:none; font-weight:bold; cursor:pointer;
+            box-shadow: 0 0 0 0 rgba(90, 14, 36, 0.7);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(90, 14, 36, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(90, 14, 36, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(90, 14, 36, 0); }
+        }
+
         input, textarea, select { width:100%; padding:10px; margin-top:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; }
-        button { background:#5d9415; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold; transition: 0.3s; }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        .delete-btn { background:#dc3545; }
-        .alert { padding: 15px; border-radius: 8px; margin-bottom:25px; display: flex; align-items: center; gap: 10px; font-weight: 500; }
-        .alert-success { color:#155724; background-color:#d4edda; border: 1px solid #c3e6cb; }
-        .alert-info { color:#0d47a1; background-color:#e3f2fd; border: 1px solid #bbdefb; }
-        table { width:100%; border-collapse:collapse; }
-        th, td { padding:12px; border-bottom:1px solid #ddd; text-align: left; }
-        th { background:#5A0E24; color:white; }
-        .back-link { display:inline-block; background:#5A0E24; color:white; padding:10px 18px; border-radius:6px; text-decoration:none; font-weight:bold; margin-bottom:20px; }
+        
+        button.add-btn { background:#5d9415; color:white; border:none; padding:12px 20px; border-radius:6px; cursor:pointer; font-weight:bold; width: 100%; }
+        .delete-btn { background:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; }
+        
+        table { width:100%; border-collapse:collapse; margin-top: 10px; }
+        th, td { padding:12px; border-bottom:1px solid #eee; text-align: left; }
+        th { background:#f8f9fa; color:#5A0E24; font-size: 13px; }
+        .q-text { max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+        
+        .alert { padding: 15px; border-radius: 8px; margin-bottom:20px; font-weight: 500; }
+        .alert-success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+        .back-link { text-decoration:none; color:#5A0E24; font-weight:bold; display:inline-block; margin-bottom:15px; }
     </style>
 </head>
 <body>
@@ -137,36 +150,40 @@ $qcount = mysqli_num_rows($questions);
         <img src="<?= $imgSrc ?>">
         <span><?= htmlspecialchars($teacher_name) ?></span>
         <div class="profile-dropdown" id="profileDropdown">
-            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <a href="logout.php">Logout</a>
         </div>
     </div>
 </div>
 
 <div class="main-content">
     
+    <a href="sample_quizzes.php" class="back-link"><i class="fas fa-arrow-left"></i> Back to Quizzes</a>
+
     <?php if($posted_success): ?>
-        <div class="alert alert-success">
-            <i class="fas fa-check-circle"></i> Sample Quiz posted successfully! It is now visible to students.
-        </div>
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i> This quiz is now LIVE for students!</div>
     <?php endif; ?>
 
-    <?php if($add_success): ?>
-        <div class="alert alert-info">
-            <i class="fas fa-plus-circle"></i> Question added successfully!
+    <?php if($qcount > 0 && !$is_posted): ?>
+    <div class="card finish-card">
+        <div>
+            <h3 style="color:#5A0E24;">Ready to Publish?</h3>
+            <p style="font-size:13px; color:#666;">You have added <?= $qcount ?> questions. Click to make it visible to students.</p>
+        </div>
+        <form method="POST" onsubmit="return confirm('Students will be able to start this quiz immediately. Continue?');">
+            <button type="submit" name="post_quiz" class="pulse-btn">
+                <i class="fas fa-paper-plane"></i> Finalize & Post Quiz
+            </button>
+        </form>
+    </div>
+    <?php elseif($is_posted): ?>
+        <div class="card" style="border-left-color: #5A0E24; background: #fdfdfd;">
+            <span style="color: #5A0E24; font-weight: bold;"><i class="fas fa-globe"></i> STATUS: POSTED</span>
         </div>
     <?php endif; ?>
-
-    <?php if($delete_success): ?>
-        <div class="alert alert-info" style="background-color: #fff3cd; color: #856404; border-color: #ffeeba;">
-            <i class="fas fa-trash-alt"></i> Question deleted successfully.
-        </div>
-    <?php endif; ?>
-
-    <a href="sample_quizzes.php" class="back-link">← Back to Quizzes</a>
 
     <div class="card">
         <h2>Add New Question</h2>
-        <form method="POST">
+        <form method="POST" id="questionForm">
             <label>Question Type</label>
             <select name="question_type" id="question_type" onchange="changeType()">
                 <option value="mcq">Multiple Choice (MCQ)</option>
@@ -174,81 +191,60 @@ $qcount = mysqli_num_rows($questions);
                 <option value="one_word">One Word</option>
             </select>
 
-            <label>Question Text</label>
-            <textarea name="question" required placeholder="Enter your question..."></textarea>
+           <textarea name="question" id="question_text_area" required 
+            placeholder="Type your question here..."></textarea>
 
             <div id="mcq_fields">
                 <input type="text" name="option1" placeholder="Option 1">
                 <input type="text" name="option2" placeholder="Option 2">
                 <input type="text" name="option3" placeholder="Option 3">
                 <input type="text" name="option4" placeholder="Option 4">
-                <label>Correct Option</label>
+                <label>Which option is correct?</label>
                 <select name="correct">
-                    <option value="1">Option 1</option>
-                    <option value="2">Option 2</option>
-                    <option value="3">Option 3</option>
-                    <option value="4">Option 4</option>
+                    <option value="1">Option 1</option><option value="2">Option 2</option>
+                    <option value="3">Option 3</option><option value="4">Option 4</option>
                 </select>
             </div>
 
             <div id="tf_fields" style="display:none">
-                <label>Correct Answer</label>
-                <select name="tf_answer">
-                    <option value="True">True</option>
-                    <option value="False">False</option>
-                </select>
+                <label>Select Correct Answer</label>
+                <select name="tf_answer"><option value="True">True</option><option value="False">False</option></select>
             </div>
 
             <div id="oneword_fields" style="display:none">
-                <label>Correct Answer</label>
-                <input type="text" name="oneword_answer" placeholder="Type the one-word answer">
+                <input type="text" name="oneword_answer" placeholder="Type the correct word/answer">
             </div>
 
             <label>Explanation (Optional)</label>
-            <textarea name="explanation" placeholder="Why is this answer correct?"></textarea>
+            <textarea name="explanation" placeholder="Explain the correct answer..."></textarea>
 
-            <button type="submit" name="add_question"><i class="fas fa-plus"></i> Add Question</button>
+            <button type="submit" name="add_question" class="add-btn">Save Question</button>
         </form>
     </div>
 
     <div class="card">
-        <h2>Manage Questions (<?= $qcount ?>)</h2>
+        <h2>Existing Questions (<?= $qcount ?>)</h2>
         <table>
-            <thead>
-                <tr><th>Question</th><th>Type</th><th>Action</th></tr>
-            </thead>
+            <thead><tr><th>Question</th><th>Type</th><th>Action</th></tr></thead>
             <tbody>
-                <?php if($qcount == 0): ?>
-                    <tr><td colspan="3" style="text-align:center;">No questions added yet.</td></tr>
-                <?php else: ?>
-                    <?php while($q = mysqli_fetch_assoc($questions)): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($q['question_text']) ?></td>
-                            <td><span style="font-size:12px; background:#eee; padding:2px 6px; border-radius:4px;"><?= ucfirst($q['question_type']) ?></span></td>
-                            <td>
-                                <form method="POST" onsubmit="return confirm('Delete this question?');">
-                                    <input type="hidden" name="question_id" value="<?= $q['id'] ?>">
-                                    <button type="submit" class="delete-btn" name="delete_question">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                <?php endif; ?>
+                <?php while($q = mysqli_fetch_assoc($questions)): ?>
+                <tr>
+                    <td><div class="q-text"><?= htmlspecialchars($q['question_text']) ?></div></td>
+                    <td><small style="color:#888;"><?= strtoupper($q['question_type']) ?></small></td>
+                    <td>
+                        <form method="POST" onsubmit="return confirm('Delete this question?');">
+                            <input type="hidden" name="question_id" value="<?= $q['id'] ?>">
+                            <button type="submit" name="delete_question" class="delete-btn"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
             </tbody>
         </table>
-    </div>
-    
-    <div style="text-align:center; margin-top: 20px;">
-        <form method="POST" onsubmit="return confirm('Ready to publish? Students will be able to see this quiz immediately.');">
-            <button type="submit" name="post_quiz" style="background:#5A0E24; padding:15px 50px; font-size: 1.2rem; border-radius: 50px; box-shadow: 0 4px 15px rgba(90,14,36,0.3);">
-                <i class="fas fa-paper-plane"></i> Finalize & Post Sample Quiz
-            </button>
-        </form>
     </div>
 </div>
 
 <script>
-// Toggle field visibility based on question type
 function changeType() {
     let type = document.getElementById("question_type").value;
     document.getElementById("mcq_fields").style.display = (type == "mcq") ? "block" : "none";
@@ -256,30 +252,12 @@ function changeType() {
     document.getElementById("oneword_fields").style.display = (type == "one_word") ? "block" : "none";
 }
 
-// User Profile dropdown
 function toggleProfileMenu() {
     const m = document.getElementById('profileDropdown');
     m.style.display = (m.style.display === 'block') ? 'none' : 'block';
 }
 
-// Automatically hide alerts after 3 seconds
-setTimeout(function() {
-    let alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        alert.style.transition = "opacity 0.6s ease";
-        alert.style.opacity = "0";
-        setTimeout(() => alert.remove(), 600);
-    });
-}, 3000);
-
-// Close dropdown on outside click
-document.addEventListener('click', e => {
-    const p = document.querySelector('.top-profile');
-    if (p && !p.contains(e.target)) {
-        document.getElementById('profileDropdown').style.display = 'none';
-    }
-});
+window.onload = changeType;
 </script>
-
 </body>
 </html>

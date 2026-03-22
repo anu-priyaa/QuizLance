@@ -40,6 +40,19 @@ if (isset($_POST['restore_class'])) {
     $success = "Class restored successfully";
 }
 
+/* DELETE CLASS PERMANENTLY */
+if(isset($_GET['delete_id'])){
+    $delete_id = (int)$_GET['delete_id'];
+
+    mysqli_query($conn,"
+        DELETE FROM Classes
+        WHERE id=$delete_id AND teacher_id=$teacher_id
+    ");
+
+    header("Location: archived_classes.php");
+    exit();
+}
+
 /* FETCH ARCHIVED CLASSES */
 $archived = mysqli_query(
     $conn,
@@ -150,6 +163,49 @@ body{background:#f0f2f5;}
 }
 .restore-btn:hover{background:#4e7d12;}
 
+.delete-icon{
+    color:#dc3545;
+    font-size:18px;
+    cursor:pointer;
+}
+
+.modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    z-index:3000;
+    justify-content:center;
+    align-items:center;
+}
+
+.modal-box{
+    background:white;
+    padding:25px;
+    border-radius:12px;
+    text-align:center;
+}
+
+.btn-confirm{
+    background:#dc3545;
+    color:white;
+    padding:10px 18px;
+    border-radius:6px;
+    text-decoration:none;
+    margin-left:10px;
+}
+
+.btn-cancel{
+    background:#ccc;
+    padding:10px 18px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.delete-icon:hover{
+    color:#a71d2a;
+}
 .success{color:green;font-weight:bold;margin-bottom:15px;}
 .empty{color:#777;}
 </style>
@@ -206,7 +262,12 @@ body{background:#f0f2f5;}
 
     <?php while ($c = mysqli_fetch_assoc($archived)): ?>
         <div class="class-card">
-            <h3><?= htmlspecialchars($c['class_name']) ?></h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3><?= htmlspecialchars($c['class_name']) ?></h3>
+
+    <i class="fas fa-trash delete-icon"
+       onclick="showDeleteModal(<?= $c['id'] ?>)"></i>
+</div>
             <small>
                 Created on <?= date("d M Y, h:i A", strtotime($c['created_at'])) ?>
             </small>
@@ -221,6 +282,18 @@ body{background:#f0f2f5;}
     <?php endwhile; ?>
 </div>
 
+</div>
+
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Delete Class Permanently?</h3>
+        <p>This action cannot be undone.</p>
+
+        <button onclick="hideDeleteModal()" class="btn-cancel">Cancel</button>
+        <a id="confirmDeleteLink" href="#" class="btn-confirm">
+            Yes, Delete
+        </a>
+    </div>
 </div>
 
 <script>
@@ -249,8 +322,29 @@ document.addEventListener('click',e=>{
     if(p&&!p.contains(e.target))
         document.getElementById('profileDropdown').style.display='none';
 });
+
+const modal = document.getElementById("deleteModal");
+
+function showDeleteModal(id){
+    document.getElementById("confirmDeleteLink").href =
+        "archived_classes.php?delete_id=" + id;
+    modal.style.display = "flex";
+}
+
+function hideDeleteModal(){
+    modal.style.display = "none";
+}
+
+window.onclick = function(e){
+    if(e.target == modal){
+        hideDeleteModal();
+    }
+}
+
 </script>
 
 <?php include 'includes/auto_logout.php'; ?>
+
+
 </body>
 </html>

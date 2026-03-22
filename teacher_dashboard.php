@@ -430,13 +430,6 @@ body {
             </div>
         </a>
 
-        <a href="doubts.php" class="menu-link">
-            <div class="menu-card">
-                <i class="fas fa-question-circle"></i>
-                <h3>Student Doubts</h3>
-            </div>
-        </a>
-
         <a href="teacher_announcements.php" class="menu-link">
             <div class="menu-card">
                 <i class="fas fa-question-circle"></i>

@@ -40,11 +40,11 @@ if (!$classRow) {
 $class_id = (int)$classRow['class_id'];
 
 
-/* FETCH ANNOUNCEMENTS */
 $ann = mysqli_query($conn,
-    "SELECT a.*, c.class_name
+    "SELECT a.*, c.class_name, t.name AS teacher_name
      FROM announcements a
      JOIN classes c ON a.class_id = c.id
+     JOIN teachers t ON a.teacher_id = t.id
      WHERE a.class_id = $class_id
        AND a.status = 'active'
      ORDER BY a.created_at DESC"
@@ -182,7 +182,8 @@ h2{color:#5A0E24;margin-bottom:20px;}
                 <p><?= nl2br(htmlspecialchars($a['message'])) ?></p>
                 <small>
                     Class: <?= htmlspecialchars($a['class_name']) ?> |
-                    Posted on <?= date('d M Y, h:i A', strtotime($a['created_at'])) ?>
+By: <?= htmlspecialchars($a['teacher_name']) ?> |
+Posted on <?= date('d M Y, h:i A', strtotime($a['created_at'])) ?>
                 </small>
             </div>
         <?php endwhile; ?>

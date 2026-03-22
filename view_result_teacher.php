@@ -23,11 +23,30 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH QUIZZES */
-$quiz_res = mysqli_query(
-    $conn,
-    "SELECT id, title FROM Quizzes WHERE teacher_id = $teacher_id"
+// 🔍 Check if teacher is SUB TEACHER
+$subCheck = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT class_id FROM class_subteachers WHERE teacher_id = $teacher_id"
+));
+
+if ($subCheck) {
+
+    // ✅ SUB TEACHER → only own quizzes
+    $quiz_res = mysqli_query($conn,
+        "SELECT q.id, q.title, t.name AS creator
+         FROM Quizzes q
+         JOIN Teachers t ON q.teacher_id = t.id
+         WHERE q.teacher_id = $teacher_id"
+    );
+
+} else {
+
+    // ✅ CLASS TEACHER → show ALL quizzes
+$quiz_res = mysqli_query($conn,
+    "SELECT q.id, q.title, t.name AS creator
+     FROM Quizzes q
+     JOIN Teachers t ON q.teacher_id = t.id"
 );
+}
 
 $selected_quiz = $_GET['quiz_id'] ?? null;
 $results = null;
@@ -36,21 +55,31 @@ $stats = null;
 if ($selected_quiz) {
     $results = mysqli_query(
         $conn,
-        "SELECT s.name, r.score, r.total_marks
-         FROM Results r
-         JOIN Students s ON r.student_id = s.id
-         WHERE r.quiz_id = $selected_quiz"
+        "SELECT s.name, qa.total_marks AS score
+ FROM quiz_attempts qa
+ JOIN Students s ON qa.student_id = s.id
+ WHERE qa.quiz_id = $selected_quiz
+ AND qa.status = 'submitted'"
     );
+$quizCreator = null;
+
+if ($selected_quiz) {
+    $quizCreator = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT t.name FROM Quizzes q
+         JOIN Teachers t ON q.teacher_id = t.id
+         WHERE q.id = $selected_quiz"
+    ));
+}
 
     $stats = mysqli_fetch_assoc(mysqli_query(
         $conn,
         "SELECT 
             COUNT(*) AS total_students,
-            AVG(score) AS avg_score,
-            MAX(score) AS max_score,
-            MIN(score) AS min_score
-         FROM Results
-         WHERE quiz_id = $selected_quiz"
+            AVG(total_marks) AS avg_score,
+MAX(total_marks) AS max_score,
+MIN(total_marks) AS min_score
+         FROM quiz_attempts
+WHERE quiz_id = $selected_quiz AND status='submitted'"
     ));
 }
 ?>
@@ -221,7 +250,8 @@ th {
             <option value="">-- Select Quiz --</option>
             <?php while ($q = mysqli_fetch_assoc($quiz_res)) { ?>
                 <option value="<?= $q['id'] ?>" <?= ($selected_quiz == $q['id']) ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($q['title']) ?>
+                    <?= htmlspecialchars($q['title']) ?> 
+(<?= htmlspecialchars($q['creator']) ?>)
                 </option>
             <?php } ?>
         </select>
@@ -237,18 +267,29 @@ th {
         <div class="analytics-card">Lowest Score<br><strong><?= $stats['min_score'] ?></strong></div>
     </div>
 
+
+    <?php
+$totalQ = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT SUM(marks) AS total FROM questions WHERE quiz_id=$selected_quiz"
+));
+$totalMarks = $totalQ['total'];
+?>
+
     <!-- RESULTS TABLE -->
     <table>
         <tr>
             <th>Student Name</th>
-            <th>Score</th>
-            <th>Total Marks</th>
+<th>Score</th>
+<th>Total Marks</th>
+<th>Created By</th>
         </tr>
         <?php while ($row = mysqli_fetch_assoc($results)) { ?>
         <tr>
             <td><?= htmlspecialchars($row['name']) ?></td>
             <td><?= $row['score'] ?></td>
-            <td><?= $row['total_marks'] ?></td>
+<td><?= $totalMarks ?></td>
+
+<td><?= htmlspecialchars($quizCreator['name'] ?? '') ?></td>
         </tr>
         <?php } ?>
     </table>
@@ -256,6 +297,8 @@ th {
     <?php elseif ($selected_quiz): ?>
         <p>No results available for this quiz.</p>
     <?php endif; ?>
+
+    
 
 </div>
 

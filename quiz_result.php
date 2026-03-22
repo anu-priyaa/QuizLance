@@ -27,8 +27,8 @@ $attempt_id = (int) $_GET['attempt_id'];
 $res = mysqli_query(
     $conn,
     "SELECT 
-        qa.score AS earned_score, 
-        qa.total_marks AS max_marks,
+        qa.total_marks AS earned_score,
+        (SELECT SUM(marks) FROM questions WHERE quiz_id = qa.quiz_id) AS max_marks,
         qa.evaluated,
         q.title,
         q.id AS quiz_id,

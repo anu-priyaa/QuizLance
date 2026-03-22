@@ -22,6 +22,34 @@ if (!isset($_GET['quiz_id'])) {
 $student_id = (int)$_SESSION['user_id'];
 $quiz_id    = (int)$_GET['quiz_id'];
 
+// 🔥 CHECK IF TEACHER UPLOADED ANSWER KEY
+$quizRes = mysqli_query($conn, "SELECT answer_key_file FROM quizzes WHERE id = $quiz_id");
+$quizData = mysqli_fetch_assoc($quizRes);
+
+$uploaded_file = $quizData['answer_key_file'] ?? '';
+
+// ✅ IF UPLOADED → DOWNLOAD IT
+if (!empty($uploaded_file) && file_exists($uploaded_file)) {
+
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="Answer_Key.pdf"');
+    readfile($uploaded_file);
+    exit();
+}
+
+// ❌ CHECK IF DESCRIPTIVE QUESTIONS EXIST
+$checkDesc = mysqli_query($conn, "
+    SELECT id FROM questions 
+    WHERE quiz_id = $quiz_id AND question_type = 'descriptive'
+    LIMIT 1
+");
+
+if (mysqli_num_rows($checkDesc) > 0) {
+    echo "<h2 style='text-align:center; color:red; margin-top:50px;'>
+    Teacher has not uploaded answer key yet.
+    </h2>";
+    exit();
+}
 /* ===============================
     FETCH QUIZ & STUDENT INFO
    =============================== */

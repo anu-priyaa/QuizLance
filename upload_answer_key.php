@@ -38,7 +38,7 @@ if(isset($_POST['upload'])){
 }
 
 $quizRes = mysqli_query($conn,"
-SELECT id,title
+SELECT id,title,answer_key_file
 FROM quizzes
 WHERE teacher_id=$teacher_id
 ORDER BY id DESC
@@ -143,13 +143,14 @@ select,input[type=file]{
 
 <option value="<?= $q['id'] ?>">
 <?= htmlspecialchars($q['title']) ?>
+<?= !empty($q['answer_key_file']) ? ' (Uploaded)' : '' ?>
 </option>
 
 <?php endwhile; ?>
 
 </select>
 
-
+<div id="existingFile" style="margin-top:10px; font-size:14px; color:#555;"></div>
 <label>Upload Answer Key (PDF)</label>
 
 <input type="file" name="answer_key" accept=".pdf" required>
@@ -165,6 +166,36 @@ Upload Answer Key
 </a>
 
 </div>
+
+<script>
+const quizData = <?php
+    mysqli_data_seek($quizRes, 0);
+    $data = [];
+    while($q = mysqli_fetch_assoc($quizRes)){
+        $data[$q['id']] = $q['answer_key_file'];
+    }
+    echo json_encode($data);
+?>;
+
+function showExistingFile(){
+    const select = document.querySelector("select[name='quiz_id']");
+    const fileDiv = document.getElementById("existingFile");
+
+    const quizId = select.value;
+
+    if(quizData[quizId]){
+        fileDiv.innerHTML = `
+            <strong>Existing File:</strong> 
+            <a href="${quizData[quizId]}" target="_blank">View Answer Key</a>
+        `;
+    } else {
+        fileDiv.innerHTML = "";
+    }
+}
+
+document.querySelector("select[name='quiz_id']")
+        .addEventListener("change", showExistingFile);
+</script>
 
 </body>
 </html>

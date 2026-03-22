@@ -24,24 +24,46 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time()
     : 'https://via.placeholder.com/85';
 
-/* FETCH QUIZZES ATTEMPTED */
 $quiz_res = mysqli_query($conn,
-    "SELECT q.id, q.title
-     FROM Results r
-     JOIN quizzes q ON r.quiz_id = q.id
-     WHERE r.student_id = $student_id"
+    "SELECT q.id, q.title, t.name AS creator
+     FROM quiz_attempts qa
+     JOIN quizzes q ON qa.quiz_id = q.id
+     JOIN Teachers t ON q.teacher_id = t.id
+     WHERE qa.student_id = $student_id
+     AND qa.status='submitted'"
 );
-
 $selected_quiz = $_GET['quiz_id'] ?? null;
 $result = null;
 
+$totalMarks = 0;
+
+if ($selected_quiz) {
+    $totalQ = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT SUM(marks) AS total FROM questions WHERE quiz_id=$selected_quiz"
+    ));
+    $totalMarks = $totalQ['total'] ?? 0;
+}
+
 if ($selected_quiz) {
     $result = mysqli_fetch_assoc(mysqli_query($conn,
-        "SELECT r.score, r.total_marks, r.submitted_at
-         FROM Results r
-         WHERE r.quiz_id = $selected_quiz AND r.student_id = $student_id"
+    "SELECT qa.total_marks AS score, qa.submitted_at
+     FROM quiz_attempts qa
+     WHERE qa.quiz_id = $selected_quiz 
+     AND qa.student_id = $student_id
+     AND qa.status='submitted'"
+));
+}
+
+$quizCreator = null;
+
+if ($selected_quiz) {
+    $quizCreator = mysqli_fetch_assoc(mysqli_query($conn,
+        "SELECT t.name FROM quizzes q
+         JOIN Teachers t ON q.teacher_id = t.id
+         WHERE q.id = $selected_quiz"
     ));
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -252,7 +274,8 @@ select{padding:12px;border-radius:6px;border:1px solid #ccc;}
                 <option value="">-- Select Quiz --</option>
                 <?php while ($q = mysqli_fetch_assoc($quiz_res)) { ?>
                     <option value="<?= $q['id'] ?>" <?= ($selected_quiz == $q['id']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($q['title']) ?>
+                        <?= htmlspecialchars($q['title']) ?> 
+(<?= htmlspecialchars($q['creator']) ?>)
                     </option>
                 <?php } ?>
             </select>
@@ -261,13 +284,18 @@ select{padding:12px;border-radius:6px;border:1px solid #ccc;}
         <?php if ($result): ?>
         <div class="result-box">
             <div class="result-card"><h3>Score</h3><p><?= $result['score'] ?></p></div>
-            <div class="result-card"><h3>Total</h3><p><?= $result['total_marks'] ?></p></div>
+            <div class="result-card"><h3>Total</h3><p><?= $totalMarks ?></p></div>
             <div class="result-card"><h3>Status</h3>
-                <p><?= ($result['score'] >= ($result['total_marks']/2)) ? 'Pass' : 'Fail' ?></p>
+                <p><?= ($result['score'] >= ($totalMarks/2)) ? 'Pass' : 'Fail' ?></p>
             </div>
             <div class="result-card"><h3>Submitted</h3>
                 <p><?= date("d M Y, h:i A", strtotime($result['submitted_at'])) ?></p>
             </div>
+
+            <div class="result-card">
+    <h3>Created By</h3>
+    <p><?= htmlspecialchars($quizCreator['name'] ?? '') ?></p>
+</div>
         </div>
         <?php elseif ($selected_quiz): ?>
             <p style="margin-top:20px;">Result not available.</p>

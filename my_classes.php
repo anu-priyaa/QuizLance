@@ -29,8 +29,6 @@ $imgSrc = $profile_pic
     ? htmlspecialchars($profile_pic) . '?t=' . time() 
     : 'https://via.placeholder.com/85';
 
-/* CREATE CLASS */
-/* CREATE CLASS */
 if (isset($_POST['create_class'])) {
 
     $class_name = trim(mysqli_real_escape_string($conn, $_POST['class_name']));
@@ -39,20 +37,20 @@ if (isset($_POST['create_class'])) {
         $error = "Class name is required";
     } else {
 
-        /* 🔒 APPLY CONDITION ONLY IF NOT TESTING */
-        if (!$testing_mode) {
+        // 🔥 COUNT EXISTING ACTIVE CLASSES
+        $countRes = mysqli_query($conn,"
+            SELECT COUNT(*) as total 
+            FROM Classes 
+            WHERE teacher_id = $teacher_id AND status='active'
+        ");
 
-            $check = mysqli_query($conn, "
-                SELECT * FROM Classes 
-                WHERE teacher_id = $teacher_id AND status='active'
-            ");
+        $countRow = mysqli_fetch_assoc($countRes);
 
-            if (mysqli_num_rows($check) > 0) {
-                $error = "You can create only ONE class as Class Teacher.";
-            }
+        if ($countRow['total'] >= 5) {
+            $error = "You can create maximum 5 classes only.";
         }
 
-        /* ✅ IF NO ERROR → INSERT */
+        // ✅ IF NO ERROR → INSERT
         if (!isset($error)) {
 
             mysqli_query(
@@ -225,6 +223,11 @@ button:hover { background:#4e7d12; transform:translateY(-2px); }
     cursor: pointer;
 }
 
+button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+}
+
 /* Animation */
 @keyframes popupFade {
     from { transform: scale(0.9); opacity: 0; }
@@ -266,9 +269,23 @@ button:hover { background:#4e7d12; transform:translateY(-2px); }
     <div class="page-card">
         <h1>Create Class</h1>
         <p>Create a new class. Students will be added by you.</p>
+        <?php
+$countRes = mysqli_query($conn,"
+    SELECT COUNT(*) as total 
+    FROM Classes 
+    WHERE teacher_id = $teacher_id AND status='active'
+");
+$countRow = mysqli_fetch_assoc($countRes);
+?>
+
+<p style="color:#555;margin-bottom:10px;">
+    Classes created: <?= $countRow['total'] ?> / 5
+</p>
         <form method="POST">
             <input type="text" name="class_name" placeholder="Enter class name" required>
-            <button name="create_class">Create Class</button>
+            <button name="create_class" <?= ($countRow['total'] >= 5) ? 'disabled' : '' ?>>
+    Create Class
+</button>
         </form>
         <?php if (isset($success)) echo "<p class='alert-success'>$success</p>"; ?>
         <?php if (isset($error)) echo "<p class='alert-error'>$error</p>"; ?>

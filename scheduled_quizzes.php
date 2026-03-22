@@ -35,6 +35,10 @@ if (isset($_POST['confirm_delete'])) {
             // Step B: Delete Quiz Attempts
             mysqli_query($conn, "DELETE FROM quiz_attempts WHERE quiz_id=$quiz_id");
 
+            // --- ADD THIS NEW STEP HERE ---
+            // Step B.2: Delete records from results table (Fixes the Foreign Key Error)
+            mysqli_query($conn, "DELETE FROM results WHERE quiz_id = $quiz_id");
+
             // Step C: Delete Question Options & Answers
             mysqli_query($conn, "DELETE qo FROM question_options qo JOIN questions q ON qo.question_id = q.id WHERE q.quiz_id = $quiz_id");
             mysqli_query($conn, "DELETE qa FROM question_answers qa JOIN questions q ON qa.question_id = q.id WHERE q.quiz_id = $quiz_id");
@@ -50,7 +54,6 @@ if (isset($_POST['confirm_delete'])) {
             $_SESSION['error_msg'] = "Error: Live or Completed quizzes cannot be deleted.";
         }
     }
-    // Redirect to show message and prevent form re-submission
     header("Location: scheduled_quizzes.php");
     exit();
 }
@@ -62,7 +65,25 @@ $teacher_name = $teacher['name'];
 $imgSrc = $teacher['profile_pic'] ? $teacher['profile_pic'] . '?t=' . time() : 'https://via.placeholder.com/85';
 
 /* 4. FETCH ALL QUIZZES */
-$quizzes = mysqli_query($conn, "SELECT q.*, c.class_name FROM quizzes q JOIN Classes c ON q.class_id = c.id WHERE q.teacher_id=$teacher_id ORDER BY q.created_at DESC");
+$quizzes = mysqli_query($conn, "
+SELECT DISTINCT q.*, c.class_name, t.name AS created_by
+FROM quizzes q
+JOIN Classes c ON q.class_id = c.id
+JOIN Teachers t ON q.teacher_id = t.id
+LEFT JOIN Class_SubTeachers st ON c.id = st.class_id
+
+WHERE
+(
+    c.teacher_id = $teacher_id   -- class teacher → all quizzes
+)
+OR
+(
+    st.teacher_id = $teacher_id  -- sub teacher
+    AND q.teacher_id = $teacher_id  -- only their quizzes
+)
+
+ORDER BY q.created_at DESC
+");
 ?>
 
 <!DOCTYPE html>
@@ -147,7 +168,8 @@ $quizzes = mysqli_query($conn, "SELECT q.*, c.class_name FROM quizzes q JOIN Cla
                 <th>Class</th>
                 <th>Duration</th>
                 <th>Status</th>
-                <th>Action</th>
+<th>Created By</th>
+<th>Action</th>
             </tr>
             <?php while($q=mysqli_fetch_assoc($quizzes)): ?>
             <tr>
@@ -156,7 +178,14 @@ $quizzes = mysqli_query($conn, "SELECT q.*, c.class_name FROM quizzes q JOIN Cla
                 <td><?= $q['duration'] ?> min</td>
                 <td class="status-<?= $q['status'] ?>"><?= ucfirst($q['status']) ?></td>
                 <td>
-                    <?php if($q['status']=='draft' || $q['status']=='scheduled'): ?>
+    <?= htmlspecialchars($q['created_by']) ?>
+
+    <?php if($q['teacher_id'] == $teacher_id): ?>
+        <span style="color:green;font-size:12px;"> (You)</span>
+    <?php endif; ?>
+</td>
+                <td>
+                    <?php if(($q['status']=='draft' || $q['status']=='scheduled') && $q['teacher_id'] == $teacher_id): ?>
                         <button class="delete-btn" onclick="openModal(<?= $q['id'] ?>)">
                             <i class="fas fa-trash"></i> Delete
                         </button>

@@ -406,7 +406,7 @@ $answers = mysqli_query($conn,"
                     
                     <div class="answer-display">
                         <div class="answer-label">Student's Answer:</div>
-                        <div class="answer-content"><?= htmlspecialchars($row['selected_answer']) ?></div>
+                        <div class="answer-content"><?= htmlspecialchars($row['answer_text'] ?? $row['selected_answer'] ?? 'No answer') ?></div>
                     </div>
 
                     <div class="answer-display" style="border-left-color: #5d9415;">
@@ -452,7 +452,7 @@ $answers = mysqli_query($conn,"
                         <div class="answer-display">
                             <div class="answer-label">Student's Answer:</div>
                             <div class="answer-content">
-                                <?= nl2br(htmlspecialchars($row['answer_text'])) ?>
+                              <?= nl2br(htmlspecialchars($row['answer_text'] ?? $row['selected_answer'] ?? 'No answer')) ?>
                             </div>
                         </div>
 

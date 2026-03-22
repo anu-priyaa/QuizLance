@@ -204,16 +204,24 @@ if ($attempt) {
     if ($attempt['status'] === 'submitted') {
 
         // View Score button
-        echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" 
-                 class="btn btn-live" style="margin-right:6px;">
-                View Score
-              </a>';
+echo '<a href="quiz_result.php?attempt_id='.$attempt['id'].'" 
+         class="btn btn-live" style="margin-right:6px;">
+        View Score
+      </a>';
 
-        // Download Answer Key button
-        echo '<a href="download_answer_key.php?quiz_id='.$q['id'].'" 
-                 class="btn btn-live">
-                Download Answer Key
-              </a>';
+// 🔥 Check if teacher uploaded OR allowed types
+$checkKey = mysqli_query($conn, "
+    SELECT answer_key_file FROM quizzes WHERE id={$q['id']}
+");
+$keyData = mysqli_fetch_assoc($checkKey);
+
+$uploaded = !empty($keyData['answer_key_file']);
+
+// Always show button (logic handled in download file)
+echo '<a href="download_answer_key.php?quiz_id='.$q['id'].'" 
+         class="btn btn-live">
+        Download Answer Key
+      </a>';
 
     } else {
         // 🕒 Started but not submitted
