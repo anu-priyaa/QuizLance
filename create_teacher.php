@@ -179,6 +179,20 @@ body{background:#f0f2f5;}
 <div class="alert alert-<?= $m['type'] ?>"><?= htmlspecialchars($m['text']) ?></div>
 <?php unset($_SESSION['message']); endif; ?>
 
+<a href="manage_teachers.php"
+   style="
+     display:inline-block;
+     margin-bottom:15px;
+     background:#861434;
+     color:white;
+     padding:8px 14px;
+     border-radius:6px;
+     text-decoration:none;
+     font-weight:bold;
+   ">
+   <i class="fas fa-arrow-left"></i> Back
+</a>
+
 <div class="form-card">
     <h2>Create Teacher</h2>
     <form method="POST">

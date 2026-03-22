@@ -172,7 +172,19 @@ th{background:#5A0E24;color:white;}
 
 <!-- MAIN -->
 <div class="main-content full" id="mainContent">
-
+<a href="manage_teachers.php"
+   style="
+     display:inline-block;
+     margin-bottom:15px;
+     background:#861434;
+     color:white;
+     padding:8px 14px;
+     border-radius:6px;
+     text-decoration:none;
+     font-weight:bold;
+   ">
+   <i class="fas fa-arrow-left"></i> Back
+</a>
 <h2 style="margin-bottom:20px;">All Teachers</h2>
 
 <a href="download_teachers_pdf.php"

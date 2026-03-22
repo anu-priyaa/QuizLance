@@ -32,7 +32,7 @@ $quiz_res = mysqli_query(
      LEFT JOIN Class_SubTeachers s ON c.id = s.class_id
      WHERE 
         c.teacher_id = $teacher_id
-        OR s.teacher_id = $teacher_id"
+        OR (s.teacher_id = $teacher_id AND q.teacher_id = $teacher_id)"
 );
 ?>
 <!DOCTYPE html>

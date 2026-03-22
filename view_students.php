@@ -146,10 +146,7 @@ body{background:#f0f2f5;}
     <small><?= date("d M Y, h:i A", strtotime($c['created_at'])) ?></small>
 
     <div style="margin-top:12px; display:flex; gap:10px;">
-        <!-- VIEW (unchanged behaviour if you want later) -->
-        <button class="view-btn">
-            <i class="fas fa-eye"></i>
-        </button>
+    
 
         <!-- DOWNLOAD STUDENT LIST -->
         <a href="download_class_students.php?class_id=<?= $c['id'] ?>">

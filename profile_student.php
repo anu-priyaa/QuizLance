@@ -232,7 +232,7 @@ body{background:#f0f2f5;}
         <h3><?= htmlspecialchars($student_name) ?></h3>
     </div>
 
-    <a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="student_dashboard.php" class ="active"><i class="fas fa-home"></i> Dashboard</a>
     <a href="my_classes_student.php"><i class="fas fa-chalkboard"></i> My Classes</a>
     <a href="view_result_student.php"><i class="fas fa-chart-line"></i> Results</a>
     <a href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a>
