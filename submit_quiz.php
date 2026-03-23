@@ -78,10 +78,10 @@ while ($q = mysqli_fetch_assoc($allQuestionsRes)) {
     $q_marks = (float) $q['marks'];
     $total_possible_marks += $q_marks;
 
-    if ($q['question_type'] === 'descriptive') {
-        $has_descriptive = true;
-        continue; // Descriptive answers skip auto-grading
-    }
+    if (in_array($q['question_type'], ['descriptive','video','image','audio'])) {
+    $has_descriptive = true;
+    continue; // skip auto grading
+}
 
     // Fetch the student's answer from DB
     $ansQuery = mysqli_query($conn, "SELECT selected_answer FROM student_answers WHERE attempt_id=$attempt_id AND question_id=$qid LIMIT 1");

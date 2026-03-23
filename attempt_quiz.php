@@ -285,16 +285,20 @@ $questionTime = (int)($q['time_limit'] ?? 0);
 
             <?php if (!empty($q['media_path'])): ?>
                 <div style="margin:20px 0; text-align: center;">
-                    <?php 
-                    $ext = strtolower(pathinfo($q['media_path'], PATHINFO_EXTENSION));
-                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
-                        <img src="<?= htmlspecialchars($q['media_path']) ?>" 
-     style="max-width:300px; width:100%; height:auto; border-radius:10px; display:block; margin:auto;">
-                    <?php elseif (in_array($ext, ['mp4', 'webm'])): ?>
-                        <video controls style="max-width:100%;"><source src="<?= htmlspecialchars($q['media_path']) ?>" type="video/<?= $ext ?>"></video>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+                    <?php if ($type === 'image'): ?>
+                        <img src="<?= htmlspecialchars($q['media_path']) ?>" alt="Question Image" style="max-width:100%; border-radius:8px;">
+                    <?php elseif ($type === 'video'): ?>
+                        <video controls style="max-width:100%; border-radius:8px;">
+                            <source src="<?= htmlspecialchars($q['media_path']) ?>" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    <?php elseif ($type === 'audio'): ?>
+                        <audio controls style="width:100%;">
+                            <source src="<?= htmlspecialchars($q['media_path']) ?>" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    <?php endif; ?> </div>
+<?php endif; ?>
 
             <div class="options-container" style="margin-top: 20px;">
                 <?php if ($type === 'mcq'): 
@@ -328,12 +332,14 @@ $questionTime = (int)($q['time_limit'] ?? 0);
            required autocomplete="off">
 
 <?php elseif ($type === 'image' || $type === 'video' || $type === 'audio'): ?>
-    <!-- 🔥 ADD THIS BLOCK -->
-    <input type="text" 
-           name="answer[<?= $q['id'] ?>]" 
-           class="textbox-input" 
-           placeholder="Type your answer" 
-           required autocomplete="off">
+    
+    <textarea 
+        name="answer[<?= $q['id'] ?>]" 
+        rows="6" 
+        class="text-area" 
+        placeholder="Write your detailed answer based on the media..." 
+        required>
+    </textarea>
 
 <?php endif; ?>
 

@@ -40,15 +40,16 @@ if (!empty($uploaded_file) && file_exists($uploaded_file)) {
 // ❌ CHECK IF DESCRIPTIVE QUESTIONS EXIST
 $checkDesc = mysqli_query($conn, "
     SELECT id FROM questions 
-    WHERE quiz_id = $quiz_id AND question_type = 'descriptive'
+    WHERE quiz_id = $quiz_id AND question_type IN ('descriptive','video','audio')
     LIMIT 1
 ");
 
 if (mysqli_num_rows($checkDesc) > 0) {
-    echo "<h2 style='text-align:center; color:red; margin-top:50px;'>
-    Teacher has not uploaded answer key yet.
-    </h2>";
-    exit();
+    echo "<script>
+alert('Answer key not uploaded by the teacher');
+window.history.back();
+</script>";
+exit();
 }
 /* ===============================
     FETCH QUIZ & STUDENT INFO

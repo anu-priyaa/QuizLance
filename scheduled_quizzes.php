@@ -66,7 +66,7 @@ $imgSrc = $teacher['profile_pic'] ? $teacher['profile_pic'] . '?t=' . time() : '
 
 /* 4. FETCH ALL QUIZZES */
 $quizzes = mysqli_query($conn, "
-SELECT DISTINCT q.*, c.class_name, t.name AS created_by
+SELECT DISTINCT q.*, c.class_name, t.name AS created_by, q.created_at
 FROM quizzes q
 JOIN Classes c ON q.class_id = c.id
 JOIN Teachers t ON q.teacher_id = t.id
@@ -169,6 +169,7 @@ ORDER BY q.created_at DESC
                 <th>Duration</th>
                 <th>Status</th>
 <th>Created By</th>
+<th>Created On</th>
 <th>Action</th>
             </tr>
             <?php while($q=mysqli_fetch_assoc($quizzes)): ?>
@@ -179,10 +180,13 @@ ORDER BY q.created_at DESC
                 <td class="status-<?= $q['status'] ?>"><?= ucfirst($q['status']) ?></td>
                 <td>
     <?= htmlspecialchars($q['created_by']) ?>
-
     <?php if($q['teacher_id'] == $teacher_id): ?>
         <span style="color:green;font-size:12px;"> (You)</span>
     <?php endif; ?>
+</td>
+
+<td>
+    <?= date('d M Y, h:i A', strtotime($q['created_at'])) ?>
 </td>
                 <td>
                     <?php if(($q['status']=='draft' || $q['status']=='scheduled') && $q['teacher_id'] == $teacher_id): ?>

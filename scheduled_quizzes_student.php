@@ -29,7 +29,7 @@ $imgSrc = $profile_pic
 /* FETCH SCHEDULED QUIZZES */
 $quizzes = mysqli_query(
     $conn,
-    "SELECT q.id, q.title, q.start_time, q.end_time, c.class_name, t.name AS teacher_name
+    "SELECT q.id, q.title, q.start_time, q.end_time, q.created_at, c.class_name, t.name AS teacher_name
      FROM quizzes q
      JOIN Classes c ON q.class_id = c.id
      JOIN class_students cs ON cs.class_id = c.id
@@ -171,6 +171,7 @@ td:last-child {
                 <th>Quiz Title</th>
                 <th>Class</th>
 <th>Created By</th>
+<th>Created On</th>
 <th>Start Time</th>
                 <th>End Time</th>
                 <th>Action</th>
@@ -195,6 +196,11 @@ $attempt = mysqli_fetch_assoc($attemptRes);
                 <td><?= htmlspecialchars($q['title']) ?></td>
                 <td><?= htmlspecialchars($q['class_name']) ?></td>
 <td><?= htmlspecialchars($q['teacher_name']) ?></td>
+
+<td>
+    <?= date("d M Y, h:i A", strtotime($q['created_at'])) ?>
+</td>
+
 <td><?= date("d M Y, h:i A", $start) ?></td>
                 <td><?= date("d M Y, h:i A", $end) ?></td>
                 <td>

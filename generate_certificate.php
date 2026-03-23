@@ -93,25 +93,26 @@ $quizzes = mysqli_query($conn,"SELECT id,title FROM quizzes");
 
 
 <script>
-
 /* When quiz is selected */
-
 document.getElementById("quizSelect").addEventListener("change", function(){
 
-let quiz_id = this.value;
+    let quiz_id = this.value;
 
-fetch("fetch_quiz_students.php?quiz_id=" + quiz_id)
-
-.then(response => response.text())
-
-.then(data => {
-
-document.getElementById("studentSelect").innerHTML = data;
+    // CHANGED: matched the filename to fetch_students_for_quiz.php
+    fetch("fetch_students_for_quiz.php?quiz_id=" + quiz_id) 
+    .then(response => {
+        if (!response.ok) throw new Error('File not found');
+        return response.text();
+    })
+    .then(data => {
+        document.getElementById("studentSelect").innerHTML = data;
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("studentSelect").innerHTML = '<option value="">Error loading students</option>';
+    });
 
 });
-
-});
-
 </script>
 
 

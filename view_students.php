@@ -97,6 +97,32 @@ body{background:#f0f2f5;}
 .class-card{background:white;padding:20px;border-radius:12px;border-left:5px solid #5d9415;}
 .view-btn{margin-top:10px;background:#5d9415;color:white;padding:8px 14px;border:none;border-radius:6px;cursor:pointer;}
 .success{color:green;font-weight:bold;margin-bottom:15px;}
+.btn-group{
+    margin-top:15px;
+    display:flex;
+    gap:12px;
+}
+
+.icon-btn{
+    width:45px;
+    height:45px;
+    border:none;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:white;
+    font-size:16px;
+}
+
+.eye-btn{
+    background:#6f42c1;
+}
+
+.download-btn{
+    background:#0b7285;
+}
 </style>
 </head>
 
@@ -136,25 +162,29 @@ body{background:#f0f2f5;}
 
 <?php if(isset($success)) echo "<p class='success'>$success</p>"; ?>
 
-<div class="page-card">
-<h2>Your Classes</h2>
+<h2 style="margin-bottom:20px;">Your Classes</h2>
 
-<div class="class-list">
 <?php while($c=mysqli_fetch_assoc($classes)): ?>
-<div class="class-card">
+<div class="page-card">
+    <div class="class-card">
     <h3><?= htmlspecialchars($c['class_name']) ?></h3>
     <small><?= date("d M Y, h:i A", strtotime($c['created_at'])) ?></small>
-
-    <div style="margin-top:12px; display:flex; gap:10px;">
     
+<div class="btn-group">
 
-        <!-- DOWNLOAD STUDENT LIST -->
-        <a href="download_class_students.php?class_id=<?= $c['id'] ?>">
+    <!-- VIEW STUDENTS -->
+    <button class="icon-btn eye-btn"
+        onclick="openStudentPopup(<?= $c['id'] ?>)">
+        <i class="fas fa-eye"></i>
+    </button>
 
-            <button class="view-btn" style="background:#0b7285;">
-                <i class="fas fa-download"></i>
-            </button>
-        </a>
+    <a href="download_class_students.php?class_id=<?= $c['id'] ?>" 
+   class="icon-btn download-btn">
+    <i class="fas fa-download"></i>
+</a>
+
+</div>
+        
     </div>
 </div>
 <?php endwhile; ?>
@@ -189,8 +219,88 @@ const p=document.querySelector('.top-profile');
 if(p&&!p.contains(e.target))
 document.getElementById('profileDropdown').style.display='none';
 });
+
+function openStudentPopup(classId) {
+    document.getElementById('studentPopup').style.display = 'block';
+
+    fetch('fetch_students.php?class_id=' + classId + '&teacher_id=<?= $teacher_id ?>')
+    .then(res => res.text())
+    .then(data => {
+        document.getElementById('studentList').innerHTML = data;
+    });
+}
+
+function closePopup() {
+    document.getElementById('studentPopup').style.display = 'none';
+}
+
+let selectedStudent = null;
+let selectedClass = null;
+
+function confirmDelete(studentId, classId){
+    selectedStudent = studentId;
+    selectedClass = classId;
+
+    document.getElementById('confirmPopup').style.display = 'block';
+}
+
+function closeConfirm(){
+    document.getElementById('confirmPopup').style.display = 'none';
+}
+
+function deleteStudent(){
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'view_students.php';
+
+    form.innerHTML = `
+        <input type="hidden" name="class_id" value="${selectedClass}">
+        <input type="hidden" name="student_id" value="${selectedStudent}">
+        <input type="hidden" name="remove_student" value="1">
+    `;
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
 </script>
 
 <?php include 'includes/auto_logout.php'; ?>
+
+<!-- STUDENT POPUP -->
+<div id="studentPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:5000;">
+
+    <div style="background:white; width:400px; max-height:500px; overflow-y:auto; margin:80px auto; padding:20px; border-radius:12px; position:relative;">
+
+        <h2 style="text-align:center; color:#5A0E24;">Students</h2>
+
+        <span onclick="closePopup()" 
+              style="position:absolute; top:10px; right:15px; cursor:pointer; font-size:20px;">✖</span>
+
+        <div id="studentList"></div>
+
+    </div>
+</div>
+
+<!-- DELETE CONFIRM POPUP -->
+<div id="confirmPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:6000;">
+
+    <div style="background:white; width:350px; margin:150px auto; padding:20px; border-radius:12px; text-align:center;">
+
+        <h3 style="color:#5A0E24;">Confirm Removal</h3>
+        <p>Do you really want to remove this student?</p>
+
+        <div style="margin-top:15px; display:flex; justify-content:center; gap:15px;">
+            <button onclick="deleteStudent()" style="background:red; color:white; border:none; padding:8px 15px; border-radius:6px;">
+                Yes
+            </button>
+
+            <button onclick="closeConfirm()" style="background:gray; color:white; border:none; padding:8px 15px; border-radius:6px;">
+                No
+            </button>
+        </div>
+
+    </div>
+</div>
 </body>
 </html>

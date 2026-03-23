@@ -52,7 +52,10 @@ $passMarks  = (float) $data['pass_marks'];
 $quiz_id    = (int) $data['quiz_id'];
 
 // Check if quiz contains descriptive questions for evaluation notice
-$descriptiveRes = mysqli_query($conn, "SELECT COUNT(*) AS descriptive_count FROM questions WHERE quiz_id = $quiz_id AND question_type = 'descriptive'");
+$descriptiveRes = mysqli_query($conn, "SELECT COUNT(*) AS descriptive_count 
+FROM questions 
+WHERE quiz_id = $quiz_id 
+AND question_type IN ('descriptive','video','image','audio')");
 $descriptiveRow = mysqli_fetch_assoc($descriptiveRes);
 $hasDescriptive = (int) $descriptiveRow['descriptive_count'] > 0;
 
@@ -80,7 +83,21 @@ $passed = ($score >= $passMarks);
         .question-item { background: #fff; border: 1px solid #eee; padding: 25px; border-radius: 12px; margin-bottom: 20px; position: relative; }
         .q-text { font-size: 17px; font-weight: 600; margin-bottom: 15px; color: #333; display: block; }
         
-        .ans-row { padding: 12px 15px; border-radius: 8px; margin-top: 10px; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        .ans-row {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 15px;
+    display: flex;
+    align-items: flex-start; /* 🔥 change this */
+    gap: 10px;
+    flex-wrap: wrap; /* 🔥 add this */
+}
+        .ans-row span {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
         .correct-ans { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .student-ans { background: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
         .wrong-ans { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
@@ -138,8 +155,8 @@ $passed = ($score >= $passMarks);
                 $correct_ans = trim($q['correct_answer_text'] ?? '');
             }
 
-            if ($q['question_type'] === 'descriptive') {
-    $is_correct = null; // not evaluated
+            if (in_array($q['question_type'], ['descriptive', 'video', 'image', 'audio'])) {
+    $is_correct = null; // manual evaluation
 } else {
     $is_correct = (!empty($correct_ans) && strcasecmp($student_ans, $correct_ans) === 0);
 }
@@ -162,7 +179,7 @@ $passed = ($score >= $passMarks);
                 
                 <div class="ans-row 
 <?= 
-    ($q['question_type'] === 'descriptive') 
+    in_array($q['question_type'], ['descriptive','video','image','audio'])
         ? 'student-ans' 
         : (empty($student_ans) 
             ? 'student-ans' 
@@ -173,7 +190,7 @@ $passed = ($score >= $passMarks);
                     <span><strong>Your Answer:</strong> <?= !empty($student_ans) ? htmlspecialchars($student_ans) : '<i>Not Answered</i>' ?></span>
                 </div>
 
-                <?php if($q['question_type'] !== 'descriptive'): ?>
+                <?php if(!in_array($q['question_type'], ['descriptive','video','image','audio'])): ?>
                     <div class="ans-row correct-ans">
                         <i class="fas fa-check-double"></i>
                         <span><strong>Correct Answer:</strong> <?= !empty($correct_ans) ? htmlspecialchars($correct_ans) : "Pending Teacher Review" ?></span>

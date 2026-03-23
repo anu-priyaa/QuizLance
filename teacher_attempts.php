@@ -12,31 +12,40 @@ $teacher_id = $_SESSION['user_id'];
 // Get selected quiz from GET or POST
 $selected_quiz_id = isset($_GET['quiz_id']) ? (int)$_GET['quiz_id'] : null;
 
-// Fetch only quizzes with descriptive questions by this teacher
+/**
+ * UPDATED QUERY:
+ * This filters for quizzes that belong to the teacher AND
+ * contain at least one question of type: descriptive, video, or audio.
+ */
 $quizzes = mysqli_query($conn,"
     SELECT DISTINCT q.id, q.title 
     FROM quizzes q
     INNER JOIN questions que ON q.id = que.quiz_id
     WHERE q.teacher_id = $teacher_id 
-    AND que.question_type = 'descriptive'
+    AND que.question_type IN ('descriptive', 'video', 'audio')
     ORDER BY q.id DESC
 ");
 
-// Fetch student attempts with descriptive answers when a quiz is selected
+// Fetch student attempts
 $attempts = null;
 if ($selected_quiz_id) {
+    /**
+     * This query finds submitted attempts for the selected quiz.
+     * It ensures we only see attempts that actually have 
+     * manual-evaluation questions inside them.
+     */
     $attempts = mysqli_query($conn,"
         SELECT DISTINCT qa.id, qa.submitted_at, qa.student_id,
-               q.title,
-               s.name as student_name
+                q.title,
+                s.name as student_name
         FROM quiz_attempts qa
         JOIN quizzes q ON qa.quiz_id = q.id
         JOIN Students s ON qa.student_id = s.id
         JOIN questions que ON q.id = que.quiz_id
         WHERE q.teacher_id = $teacher_id
         AND q.id = $selected_quiz_id
-        AND que.question_type = 'descriptive'
         AND qa.status = 'submitted'
+        AND que.question_type IN ('descriptive', 'video', 'audio')
         ORDER BY qa.submitted_at DESC
     ");
 }
@@ -412,15 +421,15 @@ if ($selected_quiz_id) {
                     $hasData = true;
                     $attempt_id = $row['id'];
                     
-                    // Fetch descriptive answers for this student
-                    $answersRes = mysqli_query($conn,"
-                        SELECT sa.*, q.question_text, q.marks
-                        FROM student_answers sa
-                        JOIN questions q ON sa.question_id = q.id
-                        WHERE sa.attempt_id = $attempt_id
-                        AND q.question_type = 'descriptive'
-                        ORDER BY q.id ASC
-                    ");
+                    // Inside your while($row = mysqli_fetch_assoc($attempts)) loop:
+
+$answersRes = mysqli_query($conn,"
+    SELECT sa.*, q.question_text, q.marks
+    FROM student_answers sa
+    JOIN questions q ON sa.question_id = q.id
+    WHERE sa.attempt_id = $attempt_id
+    ORDER BY q.id ASC
+");
                 ?>
                 <div class="student-card">
                     <div class="student-header" onclick="toggleStudentAnswers(this)">

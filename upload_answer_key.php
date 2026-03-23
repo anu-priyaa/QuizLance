@@ -38,10 +38,12 @@ if(isset($_POST['upload'])){
 }
 
 $quizRes = mysqli_query($conn,"
-SELECT id,title,answer_key_file
-FROM quizzes
-WHERE teacher_id=$teacher_id
-ORDER BY id DESC
+SELECT DISTINCT q.id, q.title, q.answer_key_file
+FROM quizzes q
+JOIN questions ques ON q.id = ques.quiz_id
+WHERE q.teacher_id = $teacher_id
+AND ques.question_type IN ('descriptive','video','audio')
+ORDER BY q.id DESC
 ");
 ?>
 
